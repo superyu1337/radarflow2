@@ -1,5 +1,8 @@
-# radarflow
+# radarflow2
 A Web radar for CS2 using [memflow](https://github.com/memflow/memflow)
+
+### Features currently missing
+- Bomb displayed on the radar
 
 ## How can I run this?
 First, you need to set up a virtual machine on linux using qemu.  
