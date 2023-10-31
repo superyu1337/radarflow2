@@ -1,0 +1,17 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #000000; /* Change the background color as needed */
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: block;
+    object-fit: contain;
+}

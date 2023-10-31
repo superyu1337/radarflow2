@@ -1,0 +1,5 @@
+[target.'cfg(unix)']
+runner = "sudo -E"
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
