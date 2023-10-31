@@ -1,9 +1,9 @@
 # radarflow
-A Web radar for CS:GO using [memflow](https://github.com/memflow/memflow)
+A Web radar for CS2 using [memflow](https://github.com/memflow/memflow)
 
 ## How can I run this?
 First, you need to set up a virtual machine on linux using qemu.  
-As of now, memflow's pcileech connector is not supported.
+As of now, memflow's pcileech connector is not supported/tested.
 
 How to set up a VM on linux is way out of scope for this. You can find plenty of information online on how to do it.
 
