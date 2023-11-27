@@ -3,7 +3,7 @@ use ::std::sync::Arc;
 use memflow::prelude::v1::*;
 use tokio::{sync::RwLock, time::{Duration, Instant}};
 
-use crate::{structs::{Connector, communication::{RadarData, PlayerType, EntityData, PlayerData}}, sdk::{self, cs2dumper, structs::{CPlayerPawn, CCSPlayerController}}};
+use crate::{structs::{Connector, communication::{RadarData, PlayerType, EntityData, PlayerData, BombData}}, sdk::{self, structs::{PlayerController, Cache, MemoryClass}}};
 
 pub struct CheatCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
@@ -67,164 +67,131 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
     let mut last_iteration_time = Instant::now();
     let mut missmatch_count = 0;
 
+    let mut cache = Cache::new();
+
     loop {
         if ctx.process.state().is_dead() {
-            println!("is dead");
             break;
         }
 
-        if sdk::is_ingame(&mut ctx)? {
+        if cache.is_outdated() {
+            cache.clean();
+
             let globals = sdk::get_globals(&mut ctx)?;
-            let entity_list = sdk::get_entity_list(&mut ctx)?;
+            let highest_index = sdk::highest_entity_index(&mut ctx)?;
             let map_name = sdk::map_name(globals, &mut ctx)?;
+            let entity_list = sdk::get_entity_list(&mut ctx)?;
+
+            cache.common().update(
+                map_name,
+                entity_list
+            );
 
             let local = sdk::get_local(&mut ctx)?;
-
-            let local_pawn_ptr: u32 = ctx.process.read(local.ptr() + cs2dumper::client::CCSPlayerController::m_hPlayerPawn)?; 
             
-            if let Some(local_pawn) = CPlayerPawn::from_uhandle(local_pawn_ptr, entity_list, &mut ctx) {
-                let local_yaw = local_pawn.angles(&mut ctx)?.y;
-                let local_pos = local_pawn.pos(&mut ctx)?;
-                let mut player_data = Vec::with_capacity(64);
-    
-                if local_pawn.is_alive(&mut ctx)? {
-                    player_data.push(
-                        EntityData::Player(
-                            PlayerData::new(
-                                local_pos, 
-                                local_yaw,
-                                PlayerType::Local,
-                                false
-                            )
-                        )
-                    );
+            if local.pawn(&mut ctx, entity_list)?.is_some() {
+                cache.push_data(sdk::structs::CachedEntityData::Player {
+                    ptr: local.ptr(),
+                    player_type: PlayerType::Local 
+                });
+
+                for idx in 1..highest_index {
+                    if let Some(entity) = PlayerController::from_entity_list_v2(&mut ctx, entity_list, idx)? {
+
+                        let class_name = entity.class_name(&mut ctx)?;
+
+                        match class_name.as_str() {
+                            "weapon_c4" => {
+                                cache.push_data(sdk::structs::CachedEntityData::Bomb {
+                                    ptr: entity.ptr()
+                                })
+                            },
+                            "cs_player_controller" => {
+                                let player_type = {
+                                    match entity.get_player_type(&mut ctx, &local)? {
+                                        Some(t) => {
+                                            if t == PlayerType::Spectator { continue } else { t }
+                                        },
+                                        None => { continue },
+                                    }
+                                };
+
+                                cache.push_data(sdk::structs::CachedEntityData::Player {
+                                    ptr: entity.ptr(),
+                                    player_type,
+                                })
+                            }
+                            _ => {}
+                        }
+                    }
                 }
+            }
 
-                let max_clients = sdk::max_clients(globals, &mut ctx)?;
+            log::debug!("Rebuilt cache.");
 
-                for idx in 1..max_clients {
-                    let list_entry = ctx.process.read_addr64(entity_list + ((8 * (idx & 0x7FFF)) >> 9) + 16)?;
-                    if list_entry.is_null() && !list_entry.is_valid() {
-                        continue;
-                    }
+            cache.new_time();
+        }
+
+        if sdk::is_ingame(&mut ctx)? {
+            let mut radar_data = Vec::with_capacity(64);
+
+            if sdk::is_bomb_planted(&mut ctx)? {
+                let bomb = sdk::get_plantedc4(&mut ctx)?;
+                let bomb_pos = bomb.pos(&mut ctx)?;
+                radar_data.push(
+                    EntityData::Bomb(BombData::new(
+                        bomb_pos,
+                        true
+                    ))
+                );
+            }
+
+            for cached_data in cache.data() {
+                match cached_data {
+                    sdk::structs::CachedEntityData::Bomb { ptr } => {
+                        if sdk::is_bomb_dropped(&mut ctx)?  {
+                            let controller = PlayerController::new(ptr);
+                            let pos = controller.pos(&mut ctx)?;
     
-                    let player_ptr = ctx.process.read_addr64(list_entry + 120 * (idx & 0x1FF))?;
-                    if player_ptr.is_null() && !player_ptr.is_valid() {
-                        continue;
-                    }
-    
-                    let pawn_uhandle = ctx.process.read(player_ptr + cs2dumper::client::CCSPlayerController::m_hPlayerPawn)?;
-    
-                    if let (Some(pawn), player) = (CPlayerPawn::from_uhandle(pawn_uhandle, entity_list, &mut ctx), CCSPlayerController::new(player_ptr)) {
-                        if player.entity_identity(&mut ctx)?.designer_name(&mut ctx)? == "cs_player_controller" && pawn.is_alive(&mut ctx)? {
-                            let pos = pawn.pos(&mut ctx)?;
-                            let angles = pawn.angles(&mut ctx)?;
-                
-                            let player_type = {
-                                match player.get_player_type(&mut ctx, &local)? {
-                                    Some(t) => {
-                                        if t == PlayerType::Spectator { continue } else { t }
-                                    },
-                                    None => { continue },
-                                }
-                            };
-            
-                            player_data.push(
-                                EntityData::Player(
-                                    PlayerData::new(
-                                        pos, 
-                                        angles.y,
-                                        player_type,
+                            radar_data.push(
+                                EntityData::Bomb(
+                                    BombData::new(
+                                        pos,
                                         false
                                     )
                                 )
                             );
                         }
-                    }
-                }
-    
-                let mut data = data_lock.write().await;
-                *data = RadarData::new(true, map_name, player_data, local_yaw)
-            }
-
-
-
-
-            //let local_pawn = sdk::get_local_pawn(&mut ctx)?;
-            //let local_pawn = CPlayerPawn::new(local_cs_player_pawn);
-
-
-
-
-
-            /*
-
-            let mut next_ent = {
-                let mut iter_ent = local.to_base();
-                while iter_ent.entity_identity(&mut ctx)?.prev_by_class(&mut ctx).is_ok() {
-                    iter_ent = iter_ent.entity_identity(&mut ctx)?.prev_by_class(&mut ctx)?;
-                }
-    
-                iter_ent
-            };
-
-            let mut count = 0;
-            let mut pawn_count = 0;
-
-            println!("prev by class ok? {}", next_ent.entity_identity(&mut ctx)?.prev_by_class(&mut ctx).is_ok());
-
-            while next_ent.entity_identity(&mut ctx)?.next_by_class(&mut ctx).is_ok() {
-                count += 1;
-                let pawn = next_ent.to_controller().pawn(entity_list, &mut ctx)?;
-
-                if let Some(p) = pawn {
-                    pawn_count += 1;
-                    if !p.is_alive(&mut ctx)? {
-                        next_ent = next_ent.entity_identity(&mut ctx).unwrap().next_by_class(&mut ctx).unwrap();
-                        continue
-                    }
-    
-                    let pos = p.pos(&mut ctx)?;
-                    let angles = p.angles(&mut ctx)?;
-        
-                    let player_type = {
-                        match next_ent.to_controller().get_player_type(&mut ctx, &local)? {
-                            Some(t) => {
-                                if t == PlayerType::Spectator {
-                                    next_ent = next_ent.entity_identity(&mut ctx).unwrap().next_by_class(&mut ctx).unwrap();
-                                    continue
-                                } else { t }
-                            },
-                            None => {
-                                next_ent = next_ent.entity_identity(&mut ctx).unwrap().next_by_class(&mut ctx).unwrap();
-                                continue 
-                            },
+                    },
+                    sdk::structs::CachedEntityData::Player { ptr, player_type } => {
+                        let controller = PlayerController::new(ptr);
+                        if let Some(pawn) = controller.pawn(&mut ctx, cache.common().entity_list())? {
+                            if pawn.is_alive(&mut ctx)? {
+                                let pos = pawn.pos(&mut ctx)?;
+                                let yaw = pawn.angles(&mut ctx)?.y;
+                                let has_bomb = pawn.has_c4(&mut ctx, cache.common().entity_list())?;
+                    
+                                radar_data.push(
+                                    EntityData::Player(
+                                        PlayerData::new(
+                                            pos, 
+                                            yaw,
+                                            player_type,
+                                            has_bomb
+                                        )
+                                    )
+                                );
+                            }
                         }
-                    };
-    
-                    player_data.push(
-                        EntityData::Player(
-                            PlayerData::new(
-                                pos, 
-                                angles.y,
-                                player_type,
-                                false
-                            )
-                        )
-                    );
+                    },
                 }
-                //let pawn = next_ent.to_controller().pawn2(entity_list, &mut ctx)?;
-
-                next_ent = next_ent.entity_identity(&mut ctx)?.next_by_class(&mut ctx)?;
             }
 
-            println!("next by class ok? {}", next_ent.entity_identity(&mut ctx)?.next_by_class(&mut ctx).is_ok());
-
-            */
-
+            let mut data = data_lock.write().await;
+            *data = RadarData::new(true, cache.common().map_name(), radar_data)
         } else {
             let mut data = data_lock.write().await;
-            *data = RadarData::empty();
+            *data = RadarData::empty()
         }
 
         if should_time {
@@ -253,7 +220,7 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
             #[cfg(not(target_os = "linux"))]
             tokio::time::sleep(remaining).await;
     
-            log::trace!("polling at {:.2}Hz", SECOND_AS_NANO as f64 / last_iteration_time.elapsed().as_nanos() as f64);
+            log::info!("poll rate: {:.2}Hz", SECOND_AS_NANO as f64 / last_iteration_time.elapsed().as_nanos() as f64);
             log::trace!("elapsed: {}", elapsed.as_nanos());
             log::trace!("target: {}", target_interval.as_nanos());
             log::trace!("missmatch count: {}", missmatch_count);
@@ -261,8 +228,6 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
             last_iteration_time = Instant::now();
         }
     }
-
-    println!("DMA loop exited for some reason");
 
     Ok(())
 }

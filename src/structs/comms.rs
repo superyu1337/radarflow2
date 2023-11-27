@@ -26,6 +26,7 @@ pub struct BombData {
     is_planted: bool
 }
 
+#[allow(dead_code)]
 impl BombData {
     pub fn new(pos: Vec3, is_planted: bool) -> BombData {
         BombData { pos, is_planted }
@@ -38,7 +39,7 @@ pub enum EntityData {
     Bomb(BombData)
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default, PartialEq)]
 pub enum PlayerType {
     #[default]
     Unknown,
@@ -58,13 +59,13 @@ pub struct RadarData {
     #[serde(rename(serialize = "entityData"))]
     player_data: Vec<EntityData>,
 
-    #[serde(rename(serialize = "localYaw"))]
-    local_yaw: f32,
+    //#[serde(rename(serialize = "localYaw"))]
+    //local_yaw: f32,
 }
 
 impl RadarData {
-    pub fn new(ingame: bool, map_name: String, player_data: Vec<EntityData>, local_yaw: f32) -> RadarData {
-        RadarData { ingame, map_name, player_data, local_yaw }
+    pub fn new(ingame: bool, map_name: String, player_data: Vec<EntityData>) -> RadarData {
+        RadarData { ingame, map_name, player_data }
     }
 
     /// Returns empty RadarData, it's also the same data that gets sent to clients when not ingame
@@ -73,7 +74,6 @@ impl RadarData {
             ingame: false,
             map_name: String::new(),
             player_data: Vec::new(),
-            local_yaw: 0.0,
         }
     }
 }

@@ -268,7 +268,7 @@ function drawEntity(pos, fillStyle, dormant, hasBomb, yaw) {
         if (hasBomb) {
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, circleRadius / 2, 0, 2 * Math.PI);
-            ctx.fillStyle = "#dbb81d";
+            ctx.fillStyle = bombColor;
             ctx.fill();
         }
 
