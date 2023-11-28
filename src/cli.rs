@@ -11,27 +11,27 @@ const POLL_RANGE: std::ops::RangeInclusive<usize> = 1..=1000;
 #[derive(Parser)]
 #[command(author, version = version(), about, long_about = None)]
 pub struct Cli {
-    /// Connector to use for DMA
+    /// Specifies the connector type for DMA
     #[clap(value_enum, short, long, ignore_case = true, default_value_t = Connector::Qemu)]
     pub connector: Connector,
 
-    /// Pcileech device name
+    /// Name of the Pcileech device
     #[clap(long, default_value_t = String::from("FPGA"))]
     pub pcileech_device: String,
 
-    /// Port to run Webserver on
+    /// Port number for the Webserver to run on
     #[arg(short, long, default_value_t = 8000, value_parser = port_in_range)]
     pub port: u16,
 
-    /// Path to serve on webserver
+    /// Path to the directory served by the Webserver
     #[arg(short, long, default_value = "./web", value_parser = valid_path)]
     pub web_path: PathBuf,
 
-    /// How often per second the DMA thread should poll for data
+    /// Polling frequency in times per second for the DMA thread
     #[arg(short = 'r', long, default_value_t = 60, value_parser = poll_in_range)]
     pub poll_rate: u16,
 
-    /// Loglevel verbosity
+    /// Verbosity level for logging to the console
     #[arg(value_enum, long, short,  ignore_case = true, default_value_t = Loglevel::Warn)]
     pub loglevel: Loglevel,
 }

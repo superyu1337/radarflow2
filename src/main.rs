@@ -15,10 +15,6 @@ mod webserver;
 async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
-    if std::env::var("RADARFLOW_LOG").is_err() {
-        std::env::set_var("RADARFLOW_LOG", "warn")
-    }
-
     simple_logger::SimpleLogger::new()
         .with_level(cli.loglevel.into())
         .init()
@@ -35,7 +31,6 @@ async fn main() -> anyhow::Result<()> {
         if let Err(err) = dma::run(cli.connector, cli.pcileech_device, cli.poll_rate, rwlock_clone).await {
             log::error!("Error in dma thread: {}", err.to_string());
         }
-
     });
 
     tokio::spawn(async move {

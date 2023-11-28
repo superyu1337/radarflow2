@@ -1,9 +1,14 @@
+mod cache;
+
 use ::std::sync::Arc;
 
 use memflow::prelude::v1::*;
 use tokio::{sync::RwLock, time::{Duration, Instant}};
 
-use crate::{structs::{Connector, communication::{RadarData, PlayerType, EntityData, PlayerData, BombData}}, sdk::{self, structs::{PlayerController, Cache, MemoryClass}}};
+use crate::{structs::{Connector, communication::{RadarData, PlayerType, EntityData, PlayerData, BombData}}, sdk::{self, structs::{MemoryClass, BaseEntity, CBaseEntity, CPlayerController}}, dma::cache::CacheBuilder};
+
+use self::cache::Cache;
+
 
 pub struct CheatCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
@@ -67,48 +72,45 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
     let mut last_iteration_time = Instant::now();
     let mut missmatch_count = 0;
 
-    let mut cache = Cache::new();
+    let mut cache = Cache::new_invalid();
 
     loop {
         if ctx.process.state().is_dead() {
             break;
         }
 
-        if cache.is_outdated() {
-            cache.clean();
+        if !cache.is_valid() {
+            let mut cached_entities = Vec::new();
 
             let globals = sdk::get_globals(&mut ctx)?;
             let highest_index = sdk::highest_entity_index(&mut ctx)?;
             let map_name = sdk::map_name(globals, &mut ctx)?;
             let entity_list = sdk::get_entity_list(&mut ctx)?;
 
-            cache.common().update(
-                map_name,
-                entity_list
-            );
-
             let local = sdk::get_local(&mut ctx)?;
             
-            if local.pawn(&mut ctx, entity_list)?.is_some() {
-                cache.push_data(sdk::structs::CachedEntityData::Player {
+            if local.get_pawn(&mut ctx, entity_list)?.is_some() {
+                cached_entities.push(cache::CachedEntity::Player {
                     ptr: local.ptr(),
                     player_type: PlayerType::Local 
                 });
 
                 for idx in 1..highest_index {
-                    if let Some(entity) = PlayerController::from_entity_list_v2(&mut ctx, entity_list, idx)? {
+                    if let Some(entity) = CBaseEntity::from_index(&mut ctx, entity_list, idx)? {
 
                         let class_name = entity.class_name(&mut ctx)?;
 
                         match class_name.as_str() {
                             "weapon_c4" => {
-                                cache.push_data(sdk::structs::CachedEntityData::Bomb {
+                                cached_entities.push(cache::CachedEntity::Bomb {
                                     ptr: entity.ptr()
                                 })
                             },
                             "cs_player_controller" => {
+                                let controller = entity.to_player_controller();
+
                                 let player_type = {
-                                    match entity.get_player_type(&mut ctx, &local)? {
+                                    match controller.get_player_type(&mut ctx, &local)? {
                                         Some(t) => {
                                             if t == PlayerType::Spectator { continue } else { t }
                                         },
@@ -116,7 +118,7 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
                                     }
                                 };
 
-                                cache.push_data(sdk::structs::CachedEntityData::Player {
+                                cached_entities.push(cache::CachedEntity::Player {
                                     ptr: entity.ptr(),
                                     player_type,
                                 })
@@ -127,9 +129,13 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
                 }
             }
 
-            log::debug!("Rebuilt cache.");
+            cache = CacheBuilder::new()
+                .entity_cache(cached_entities)
+                .entity_list(entity_list)
+                .map_name(map_name)
+                .build()?;
 
-            cache.new_time();
+            log::debug!("Rebuilt cache.");
         }
 
         if sdk::is_ingame(&mut ctx)? {
@@ -146,12 +152,12 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
                 );
             }
 
-            for cached_data in cache.data() {
+            for cached_data in cache.entity_cache() {
                 match cached_data {
-                    sdk::structs::CachedEntityData::Bomb { ptr } => {
+                    cache::CachedEntity::Bomb { ptr } => {
                         if sdk::is_bomb_dropped(&mut ctx)?  {
-                            let controller = PlayerController::new(ptr);
-                            let pos = controller.pos(&mut ctx)?;
+                            let bomb_entity = CBaseEntity::new(ptr);
+                            let pos = bomb_entity.pos(&mut ctx)?;
     
                             radar_data.push(
                                 EntityData::Bomb(
@@ -163,13 +169,13 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
                             );
                         }
                     },
-                    sdk::structs::CachedEntityData::Player { ptr, player_type } => {
-                        let controller = PlayerController::new(ptr);
-                        if let Some(pawn) = controller.pawn(&mut ctx, cache.common().entity_list())? {
+                    cache::CachedEntity::Player { ptr, player_type } => {
+                        let controller = CPlayerController::new(ptr);
+                        if let Some(pawn) = controller.get_pawn(&mut ctx, cache.entity_list())? {
                             if pawn.is_alive(&mut ctx)? {
                                 let pos = pawn.pos(&mut ctx)?;
                                 let yaw = pawn.angles(&mut ctx)?.y;
-                                let has_bomb = pawn.has_c4(&mut ctx, cache.common().entity_list())?;
+                                let has_bomb = pawn.has_c4(&mut ctx, cache.entity_list())?;
                     
                                 radar_data.push(
                                     EntityData::Player(
@@ -188,7 +194,11 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
             }
 
             let mut data = data_lock.write().await;
-            *data = RadarData::new(true, cache.common().map_name(), radar_data)
+            if cache.map_name() == "<empty>" || cache.map_name().is_empty() {
+                *data = RadarData::empty()
+            } else {
+                *data = RadarData::new(true, cache.map_name(), radar_data)
+            }
         } else {
             let mut data = data_lock.write().await;
             *data = RadarData::empty()
@@ -221,8 +231,8 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
             tokio::time::sleep(remaining).await;
     
             log::info!("poll rate: {:.2}Hz", SECOND_AS_NANO as f64 / last_iteration_time.elapsed().as_nanos() as f64);
-            log::trace!("elapsed: {}", elapsed.as_nanos());
-            log::trace!("target: {}", target_interval.as_nanos());
+            log::trace!("elapsed: {}ns", elapsed.as_nanos());
+            log::trace!("target: {}ns", target_interval.as_nanos());
             log::trace!("missmatch count: {}", missmatch_count);
     
             last_iteration_time = Instant::now();

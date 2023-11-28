@@ -5,17 +5,17 @@ use crate::dma::CheatCtx;
 use memflow::prelude::v1::*;
 use anyhow::Result;
 
-use self::structs::{PlayerController, PlayerPawn, MemoryClass, Bomb};
+use self::structs::{CPlayerController, CBaseEntity, MemoryClass, CPlayerPawn};
 
-pub fn get_local(ctx: &mut CheatCtx) -> Result<PlayerController> {
+pub fn get_local(ctx: &mut CheatCtx) -> Result<CPlayerController> {
     let ptr = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwLocalPlayerController)?;
-    Ok(PlayerController::new(ptr))
+    Ok(CPlayerController::new(ptr))
 }
 
-pub fn get_plantedc4(ctx: &mut CheatCtx) -> Result<Bomb> {
+pub fn get_plantedc4(ctx: &mut CheatCtx) -> Result<CBaseEntity> {
     let ptr = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwPlantedC4)?;
     let ptr2 = ctx.process.read_addr64(ptr)?;
-    Ok(Bomb::new(ptr2))
+    Ok(CBaseEntity::new(ptr2))
 }
 
 pub fn is_bomb_planted(ctx: &mut CheatCtx) -> Result<bool> {
@@ -30,10 +30,16 @@ pub fn is_bomb_dropped(ctx: &mut CheatCtx) -> Result<bool> {
     Ok(data != 0)
 }
 
+pub fn is_ingame(ctx: &mut CheatCtx) -> Result<bool> {
+    let game_rules = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
+    let data: i32 = ctx.process.read(game_rules + cs2dumper::client::C_CSGameRules::m_gamePhase)?;
+    Ok(data != 1)
+}
+
 #[allow(dead_code)]
-pub fn get_local_pawn(ctx: &mut CheatCtx) -> Result<PlayerPawn> {
+pub fn get_local_pawn(ctx: &mut CheatCtx) -> Result<CPlayerPawn> {
     let ptr = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwLocalPlayerPawn)?;
-    Ok(PlayerPawn::new(ptr))
+    Ok(CPlayerPawn::new(ptr))
 }
 
 pub fn get_entity_list(ctx: &mut CheatCtx) -> Result<Address> {
@@ -51,20 +57,16 @@ pub fn map_name(global_vars: Address, ctx: &mut CheatCtx) -> Result<String> {
     Ok(ctx.process.read_char_string_n(ptr, 32)?)
 }
 
-/* 
-pub fn max_clients(global_vars: Address, ctx: &mut CheatCtx) -> Result<i32> {
-    Ok(ctx.process.read(global_vars + 0x10)?)
-}
-*/
-
 pub fn highest_entity_index(ctx: &mut CheatCtx) -> Result<i32> {
     let game_entity_system = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwGameEntitySystem)?;
     let highest_index = ctx.process.read(game_entity_system + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex)?;
     Ok(highest_index)
 }
 
-pub fn is_ingame(ctx: &mut CheatCtx) -> Result<bool> {
+/*
+pub fn network_is_ingame(ctx: &mut CheatCtx) -> Result<bool> {
     let ptr = ctx.process.read_addr64(ctx.engine_module.base + cs2dumper::offsets::engine2_dll::dwNetworkGameClient)?;
     let signonstate: u64 = ctx.process.read(ptr + cs2dumper::offsets::engine2_dll::dwNetworkGameClient_signOnState)?;
     Ok(signonstate == 6)
 }
+*/
