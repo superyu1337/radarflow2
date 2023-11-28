@@ -1587,7 +1587,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "radarflow-cs2"
+name = "radarflow2"
 version = "0.1.1"
 dependencies = [
  "anyhow",
