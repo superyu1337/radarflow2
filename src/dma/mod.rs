@@ -138,7 +138,7 @@ pub async fn run(connector: Connector, pcileech_device: String, poll_rate: u16, 
             log::debug!("Rebuilt cache.");
         }
 
-        if sdk::is_ingame(&mut ctx)? {
+        if sdk::network_is_ingame(&mut ctx)? {
             let mut radar_data = Vec::with_capacity(64);
 
             if sdk::is_bomb_planted(&mut ctx)? {

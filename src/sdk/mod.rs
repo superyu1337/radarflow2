@@ -30,11 +30,14 @@ pub fn is_bomb_dropped(ctx: &mut CheatCtx) -> Result<bool> {
     Ok(data != 0)
 }
 
+/*
 pub fn is_ingame(ctx: &mut CheatCtx) -> Result<bool> {
     let game_rules = ctx.process.read_addr64(ctx.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
     let data: i32 = ctx.process.read(game_rules + cs2dumper::client::C_CSGameRules::m_gamePhase)?;
+    println!("m_gamePhase: {}", data);
     Ok(data != 1)
 }
+*/
 
 #[allow(dead_code)]
 pub fn get_local_pawn(ctx: &mut CheatCtx) -> Result<CPlayerPawn> {
@@ -63,10 +66,9 @@ pub fn highest_entity_index(ctx: &mut CheatCtx) -> Result<i32> {
     Ok(highest_index)
 }
 
-/*
+
 pub fn network_is_ingame(ctx: &mut CheatCtx) -> Result<bool> {
     let ptr = ctx.process.read_addr64(ctx.engine_module.base + cs2dumper::offsets::engine2_dll::dwNetworkGameClient)?;
     let signonstate: u64 = ctx.process.read(ptr + cs2dumper::offsets::engine2_dll::dwNetworkGameClient_signOnState)?;
     Ok(signonstate == 6)
 }
-*/
