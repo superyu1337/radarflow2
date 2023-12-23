@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # dma and memory
-memflow = "=0.2.0-beta10"
+memflow = "=0.2.0-beta11"
 dataview = "1.0.1"
 
 # logging 

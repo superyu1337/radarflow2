@@ -7,7 +7,8 @@ As of now, memflow's pcileech connector is not supported/tested.
 
 How to set up a VM on linux is way out of scope for this. You can find plenty of information online on how to do it.
 
-After you have set up your VM, you can clone this repository on your host:  
+Before you begin, install the necessary memflow plugins using memflowup from the *dev channel*!
+Now you can clone this repository on your host: 
 `git clone https://github.com/superyu1337/radarflow2.git`
 
 Now you can run radarflow:  
