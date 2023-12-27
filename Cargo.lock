@@ -344,7 +344,7 @@ checksum = "09113ac46fb70539ed96b74af4382516fc25bfc463164eeb0ca036b9f77371d8"
 dependencies = [
  "itertools 0.10.5",
  "lazy_static",
- "proc-macro-crate 2.0.0",
+ "proc-macro-crate",
  "proc-macro2 1.0.71",
  "quote 1.0.33",
  "syn 1.0.109",
@@ -515,9 +515,9 @@ dependencies = [
 
 [[package]]
 name = "darling"
-version = "0.13.4"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
+checksum = "0209d94da627ab5605dcccf08bb18afa5009cfbef48d8a8b7d7bdbc79be25c5e"
 dependencies = [
  "darling_core",
  "darling_macro",
@@ -525,27 +525,27 @@ dependencies = [
 
 [[package]]
 name = "darling_core"
-version = "0.13.4"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
+checksum = "177e3443818124b357d8e76f53be906d60937f0d3a90773a664fa63fa253e621"
 dependencies = [
  "fnv",
  "ident_case",
  "proc-macro2 1.0.71",
  "quote 1.0.33",
  "strsim",
- "syn 1.0.109",
+ "syn 2.0.42",
 ]
 
 [[package]]
 name = "darling_macro"
-version = "0.13.4"
+version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
+checksum = "836a9bbc7ad63342d6d6e7b815ccab164bc77a2d95d84bc3117a8c0d5c98e2d5"
 dependencies = [
  "darling_core",
  "quote 1.0.33",
- "syn 1.0.109",
+ "syn 2.0.42",
 ]
 
 [[package]]
@@ -1180,9 +1180,9 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "memflow"
-version = "0.2.0-beta11"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c33dc6396994b264c27800fd6b2270062381d01a27a1c3676de75dbb4210573"
+checksum = "5e4ab23adc6b68aa85d9d2d43c04f31c51b895acb323f807ff95ed8d844639b1"
 dependencies = [
  "abi_stable",
  "bitflags 1.3.2",
@@ -1211,15 +1211,15 @@ dependencies = [
 
 [[package]]
 name = "memflow-derive"
-version = "0.2.0-beta3"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee50e66f855a8a9c93b7c107fab899b25952ba8c7f0e97602a662a99c84fbef7"
+checksum = "d766f6681f968c92eb0359fc4bc99039ebe2568df4bb884c7cb7b16023e94d32"
 dependencies = [
  "darling",
- "proc-macro-crate 1.3.1",
+ "proc-macro-crate",
  "proc-macro2 1.0.71",
  "quote 1.0.33",
- "syn 1.0.109",
+ "syn 2.0.42",
 ]
 
 [[package]]
@@ -1551,16 +1551,6 @@ name = "ppv-lite86"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
-
-[[package]]
-name = "proc-macro-crate"
-version = "1.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f4c021e1093a56626774e81216a4ce732a735e5bad4868a03f3ed65ca0c3919"
-dependencies = [
- "once_cell",
- "toml_edit 0.19.15",
-]
 
 [[package]]
 name = "proc-macro-crate"
