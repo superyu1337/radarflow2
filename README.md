@@ -1,23 +1,15 @@
-# radarflow2
-A Web radar for CS2 using [memflow](https://github.com/memflow/memflow)
+# cs2-memflow-cheats
+### What is this?
+This is a repository for my CS2 cheats which utilize [memflow](https://github.com/memflow/memflow).
 
-## How can I run this?
-First, you need to set up a virtual machine on linux using qemu.  
-As of now, memflow's pcileech connector is not supported/tested.
+### Contents
+[csflow](csflow/README.md) - Rust library for creating CS2 cheats utilizing memflow  
+[radarflow](radarflow/README.md) - A Web radar for CS2 utilizing memflow
 
-How to set up a VM on linux is way out of scope for this. You can find plenty of information online on how to do it.
-
-Before you begin, install the necessary memflow plugins using memflowup from the *dev channel!*  
-Now you can clone this repository on your host:  
-`git clone https://github.com/superyu1337/radarflow2.git`
-
-Now you can run radarflow:  
-`cargo run --release`
-
-For an overview of CLI commands, run this:  
-`cargo run --release -- --help`
-
-## Detection Status
-VAC: ✅ (Undetected)  
-FaceIt: ❓ (Unknown, could work with proper spoofing)  
-ESEA: ❓ (Unknown, could work with proper spoofing)  
+### Todo
+- csflow
+    - [] Documentation
+    - [ ] Test with pcileech hardware
+- radarflow
+    - [ ] Test with pcileech hardware
+    - [ ] More useful logging, maybe a TUI to write statistics?

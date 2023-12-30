@@ -1,0 +1,40 @@
+[package]
+name = "radarflow"
+version = "0.2.0"
+authors = ["Janek S <development@superyu.xyz>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+csflow = { path = "../csflow" }
+
+# cli
+clap = { version = "4.3.19", features = ["derive", "string"] }
+
+# tokio
+tokio = { version = "1.29.1", features = ["full"] }
+tokio-timerfd = "0.2.0"
+
+# serde
+serde = { version = "1.0.181", features = ["derive"] }
+serde_json = "1.0.104"
+
+# networking
+axum = { version = "0.6.20", features = ["ws"] }
+tower-http = { version = "0.4.3", features = ["fs"] }
+tower = "0.4.13"
+local-ip-address = "0.5.4"
+
+# other
+
+
+# error handling
+anyhow = "1.0.77"
+
+# logging 
+log = "0.4.19"
+simple_logger = "4.2.0"
+
+[build-dependencies]
+vergen = { version = "8.0.0", features = ["build", "cargo", "git", "gitcl", "rustc", "si"] }

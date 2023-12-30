@@ -1,0 +1,28 @@
+[package]
+name = "csflow"
+version = "0.1.1"
+authors = ["Janek S <development@superyu.xyz>"]
+edition = "2021"
+description = "SDK for CS2 cheats utilizing memflow"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# memory
+memflow = "0.2.0"
+dataview = "1.0.1"
+
+# logging
+log = "0.4.19"
+
+# error handling
+thiserror = "1.0.52"
+
+# derive stuff
+enum-primitive-derive = "0.2.2"
+num-traits = "0.2.16"
+serde = { version = "1.0.181", features = ["derive"] }
+clap = { version = "4.3.19", features = ["derive", "string"] }
+
+[build-dependencies]
+reqwest = { version = "0.11.18", features = ["blocking"] }
