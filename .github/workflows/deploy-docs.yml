@@ -22,36 +22,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  # Build docs job
+  build_docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Rust
-        uses: ATiltedTree/setup-rust@v1.0.5
+      - uses: actions/checkout@v2
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: 1.74
-      - name: Build Docs
+          toolchain: stable
+      - name: Build docs
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --no-deps
+      - name: Fix docs
         run: |
-          cargo doc --no-deps
           rm -rf ./docs
           echo "<meta http-equiv=\"refresh\" content=\"0; url=csflow/index.html\">" > target/doc/index.html
           cp -r target/doc ./docs
-      - name: Fix permissions
-        run: |
           chmod -c -R +rX "./docs/" | while read line; do
             echo "::warning title=Invalid file permissions automatically fixed::$line"
           done
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './docs'
+
+  # Deploy job
+  deploy:
+   # Add a dependency to the build job
+    needs: build_docs
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
