@@ -15,6 +15,8 @@ jobs:
 
       - name: Set up Rust
         uses: ATiltedTree/setup-rust@v1.0.5
+        with:
+          rust-version: 1.74
 
       - name: Build Docs
         run: |
