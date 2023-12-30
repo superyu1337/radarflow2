@@ -1,9 +1,13 @@
-name: Deploy Docs to GitHub Pages
+# Simple workflow for deploying static content to GitHub Pages
+name: Deploy Docs to Github Pages
 
 on:
+  # Runs on pushes targeting the default branch
   push:
-    branches:
-      - main  # Adjust this branch name if needed
+    branches: ["main"]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -18,27 +22,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  # Single deploy job since we're just deploying
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4.1.1
-
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Set up Rust
         uses: ATiltedTree/setup-rust@v1.0.5
         with:
           rust-version: 1.74
-
       - name: Build Docs
         run: |
           cargo doc --no-deps
           rm -rf ./docs
           echo "<meta http-equiv=\"refresh\" content=\"0; url=csflow/index.html\">" > target/doc/index.html
           cp -r target/doc ./docs
-
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
