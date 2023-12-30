@@ -8,7 +8,7 @@ This is a repository for my CS2 cheats which utilize [memflow](https://github.co
 
 ### Todo
 - csflow
-    - [] Documentation
+    - [ ] Documentation
     - [ ] Test with pcileech hardware
 - radarflow
     - [ ] Test with pcileech hardware
