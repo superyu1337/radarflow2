@@ -41,12 +41,16 @@ jobs:
           rm -rf ./docs
           echo "<meta http-equiv=\"refresh\" content=\"0; url=csflow/index.html\">" > target/doc/index.html
           cp -r target/doc ./docs
+      - name: Fix permissions
+        run: |
+          chmod -c -R +rX "./docs/" | while read line; do
+            echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      - name: Upload artifact
+      - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: './docs'
       - name: Deploy to GitHub Pages
         id: deployment
