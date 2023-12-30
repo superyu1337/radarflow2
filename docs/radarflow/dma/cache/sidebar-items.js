@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CachedEntity"],"struct":["Cache","CacheBuilder"]};

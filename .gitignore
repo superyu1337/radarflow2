@@ -1,1 +1,4 @@
 /target
+csflow/src/cs2dumper/offsets.rs
+csflow/src/cs2dumper/engine2.rs
+csflow/src/cs2dumper/client.rs

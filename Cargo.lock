@@ -477,7 +477,7 @@ dependencies = [
 
 [[package]]
 name = "csflow"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "clap",
  "dataview 1.0.1",
@@ -1473,8 +1473,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "radarflow-leech"
-version = "0.1.0"
+name = "radarflow"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "axum",

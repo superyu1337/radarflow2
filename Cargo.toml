@@ -1,3 +1,3 @@
 [workspace]
-members = ["csflow", "radarflow-leech"]
+members = ["csflow", "radarflow"]
 resolver = "2"

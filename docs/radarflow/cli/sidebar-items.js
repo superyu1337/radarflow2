@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["POLL_RANGE","PORT_RANGE"],"enum":["Loglevel"],"fn":["poll_in_range","port_in_range","valid_path","version"],"struct":["Cli"]};
