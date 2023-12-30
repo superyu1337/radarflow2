@@ -1,4 +1,4 @@
-# cs2-memflow-cheats
+# cs2-memflow
 ### What is this?
 This is a repository for my CS2 cheats which utilize [memflow](https://github.com/memflow/memflow).
 
