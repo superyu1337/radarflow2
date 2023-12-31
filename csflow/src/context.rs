@@ -1,6 +1,6 @@
 use memflow::{plugins::{IntoProcessInstanceArcBox, Inventory, ConnectorArgs, args::Args}, os::{ModuleInfo, Os, Process}, mem::MemoryView, types::Address};
 
-use crate::{error::Error, structs::{CPlayerController, CBaseEntity}, cs2dumper, traits::MemoryClass};
+use crate::{error::Error, structs::{CPlayerController, CBaseEntity, GlobalVars, GameRules}, cs2dumper, traits::MemoryClass};
 
 pub struct CheatCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
@@ -71,39 +71,30 @@ impl CheatCtx {
         Ok(CBaseEntity::new(ptr2))
     }
     
-    pub fn is_bomb_planted(&mut self) -> Result<bool, Error> {
-        let game_rules = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
-        let data: u8 = self.process.read(game_rules + cs2dumper::client::C_CSGameRules::m_bBombPlanted)?;
-        Ok(data != 0)
-    }
-    
-    pub fn is_bomb_dropped(&mut self) -> Result<bool, Error> {
-        let game_rules = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
-        let data: u8 = self.process.read(game_rules + cs2dumper::client::C_CSGameRules::m_bBombDropped)?;
-        Ok(data != 0)
+    pub fn get_globals(&mut self) -> Result<GlobalVars, Error> {
+        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGlobalVars)?;
+        Ok(GlobalVars::new(ptr))
     }
 
+    pub fn get_gamerules(&mut self) -> Result<GameRules, Error> {
+        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
+        Ok(GameRules::new(ptr))
+    }
+
+    // todo: seperate into own class
     pub fn get_entity_list(&mut self) -> Result<Address, Error> {
         let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwEntityList)?;
         Ok(ptr)
     }
     
-    pub fn get_globals(&mut self) -> Result<Address, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGlobalVars)?;
-        Ok(ptr)
-    }
-    
-    pub fn map_name(&mut self, global_vars: Address) -> Result<String, Error> {
-        let ptr = self.process.read_addr64(global_vars + 0x188)?;
-        Ok(self.process.read_char_string_n(ptr, 32)?)
-    }
-    
+    // todo: seperate into own class
     pub fn highest_entity_index(&mut self) -> Result<i32, Error> {
         let game_entity_system = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameEntitySystem)?;
         let highest_index = self.process.read(game_entity_system + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex)?;
         Ok(highest_index)
     }
     
+    // todo: seperate into own class
     pub fn network_is_ingame(&mut self) -> Result<bool, Error> {
         let ptr = self.process.read_addr64(self.engine_module.base + cs2dumper::offsets::engine2_dll::dwNetworkGameClient)?;
         let signonstate: i32 = self.process.read(ptr + cs2dumper::offsets::engine2_dll::dwNetworkGameClient_signOnState)?;

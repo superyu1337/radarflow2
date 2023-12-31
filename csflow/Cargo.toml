@@ -1,6 +1,6 @@
 [package]
 name = "csflow"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Janek S <development@superyu.xyz>"]
 edition = "2021"
 description = "SDK for CS2 cheats utilizing memflow"

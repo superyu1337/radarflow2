@@ -3,6 +3,7 @@ use num_traits::FromPrimitive;
 
 use crate::{CheatCtx, Error, cs2dumper, structs::Vec3, traits::{MemoryClass, BaseEntity}, enums::{TeamID, PlayerType}};
 
+#[derive(Debug, Clone, Copy)]
 pub struct CPlayerController(Address);
 
 impl MemoryClass for CPlayerController {

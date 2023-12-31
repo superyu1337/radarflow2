@@ -1,6 +1,7 @@
 use memflow::{types::Address, mem::MemoryView};
 use crate::{CheatCtx, Error, cs2dumper, traits::{BaseEntity, MemoryClass}, structs::Vec3};
 
+#[derive(Debug, Clone, Copy)]
 pub struct CBaseEntity(Address);
 
 impl MemoryClass for CBaseEntity {

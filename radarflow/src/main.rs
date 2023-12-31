@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
 
     let rwlock_clone = rwlock.clone();
     let dma_handle = tokio::spawn(async move {
-        if let Err(err) = dma::run(cli.connector, cli.pcileech_device, cli.poll_rate, rwlock_clone).await {
+        if let Err(err) = dma::run(cli.connector, cli.pcileech_device, rwlock_clone).await {
             log::error!("Error in dma thread: [{}]", err.to_string());
         }
     });

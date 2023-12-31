@@ -1,4 +1,4 @@
-use csflow::{memflow::Address, enums::PlayerType};
+use csflow::{memflow::Address, enums::PlayerType, structs::{GlobalVars, GameRules}, traits::MemoryClass};
 
 #[derive(Clone, Copy)]
 pub enum CachedEntity {
@@ -8,54 +8,71 @@ pub enum CachedEntity {
 
 pub struct Cache {
     timestamp: std::time::Instant,
+    valid: bool,
     entity_cache: Vec<CachedEntity>,
-    map_name: String,
     entity_list: Address,
+    globals: GlobalVars,
+    gamerules: GameRules,
 }
 
 impl Cache {
     pub fn is_valid(&self) -> bool {
-        if self.timestamp.elapsed() > std::time::Duration::from_millis(250) {
-            return false;
-        }
+        if self.valid {
+            if self.timestamp.elapsed() > std::time::Duration::from_secs(60 * 3) {
+                log::info!("Invalidated cache! Reason: time");
+                return false
+            }
 
-        true
+            true
+        } else { false }
     }
 
     pub fn new_invalid() -> Cache {
         Cache {
             timestamp: std::time::Instant::now().checked_sub(std::time::Duration::from_millis(500)).unwrap(),
+            valid: false,
             entity_cache: Vec::new(),
-            map_name: String::new(),
             entity_list: Address::null(),
+            globals: GlobalVars::new(Address::null()),
+            gamerules: GameRules::new(Address::null()),
         }
+    }
+
+    pub fn invalidate(&mut self) {
+        self.valid = false;
     }
 
     pub fn entity_cache(&mut self) -> Vec<CachedEntity> {
         self.entity_cache.clone()
     }
 
-    pub fn map_name(&self) -> String {
-        self.map_name.clone()
-    }
-
     pub fn entity_list(&self) -> Address {
         self.entity_list
+    }
+
+    pub fn globals(&self) -> GlobalVars {
+        self.globals
+    }
+
+    pub fn gamerules(&self) -> GameRules {
+        self.gamerules
     }
 }
 
 pub struct CacheBuilder {
     entity_cache: Option<Vec<CachedEntity>>,
-    map_name: Option<String>,
-    entity_list: Option<Address>
+    entity_list: Option<Address>,
+    globals: Option<GlobalVars>,
+    gamerules: Option<GameRules>
 }
 
 impl CacheBuilder {
     pub fn new() -> CacheBuilder {
         CacheBuilder {
             entity_cache: None,
-            map_name: None,
             entity_list: None,
+            globals: None,
+            gamerules: None,
         }
     }
 
@@ -64,22 +81,29 @@ impl CacheBuilder {
         self
     }
 
-    pub fn map_name(mut self, map_name: String) -> CacheBuilder {
-        self.map_name = Some(map_name);
+    pub fn entity_list(mut self, entity_list: Address) -> CacheBuilder {
+        self.entity_list = Some(entity_list);
         self
     }
 
-    pub fn entity_list(mut self, entity_list: Address) -> CacheBuilder {
-        self.entity_list = Some(entity_list);
+    pub fn globals(mut self, globals: GlobalVars) -> CacheBuilder {
+        self.globals = Some(globals);
+        self
+    }
+
+    pub fn gamerules(mut self, gamerules: GameRules) -> CacheBuilder {
+        self.gamerules = Some(gamerules);
         self
     }
 
     pub fn build(self) -> anyhow::Result<Cache> {
         Ok(Cache {
             timestamp: std::time::Instant::now(),
+            valid: true,
             entity_cache: self.entity_cache.ok_or(anyhow::anyhow!("entity_cache not set on builder"))?,
-            map_name: self.map_name.ok_or(anyhow::anyhow!("map_name not set on builder"))?,
             entity_list: self.entity_list.ok_or(anyhow::anyhow!("entity_list not set on builder"))?,
+            globals: self.globals.ok_or(anyhow::anyhow!("globals not set on builder"))?,
+            gamerules: self.gamerules.ok_or(anyhow::anyhow!("gamerules not set on builder"))?,
         })
     }
 }

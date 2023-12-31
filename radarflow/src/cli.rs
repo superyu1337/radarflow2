@@ -4,7 +4,6 @@ use clap::{Parser, ValueEnum};
 use csflow::{Connector, memflow::Inventory};
 
 const PORT_RANGE: std::ops::RangeInclusive<usize> = 8000..=65535;
-const POLL_RANGE: std::ops::RangeInclusive<usize> = 1..=1000;
 
 #[derive(Parser)]
 #[command(author, version = version(), about, long_about = None)]
@@ -24,10 +23,6 @@ pub struct Cli {
     /// Path to the directory served by the Webserver
     #[arg(short, long, default_value = "./webradar", value_parser = valid_path)]
     pub web_path: PathBuf,
-
-    /// Polling frequency in times per second for the DMA thread
-    #[arg(short = 'r', long, default_value_t = 60, value_parser = poll_in_range)]
-    pub poll_rate: u16,
 
     /// Verbosity level for logging to the console
     #[arg(value_enum, long, short,  ignore_case = true, default_value_t = Loglevel::Warn)]
@@ -73,21 +68,6 @@ fn valid_path(s: &str) -> Result<PathBuf, String> {
     }
 
     Ok(path)
-}
-
-fn poll_in_range(s: &str) -> Result<u16, String> {
-    let port: usize = s
-        .parse()
-        .map_err(|_| format!("`{s}` isn't a valid number"))?;
-    if POLL_RANGE.contains(&port) {
-        Ok(port as u16)
-    } else {
-        Err(format!(
-            "not in range {}-{}",
-            POLL_RANGE.start(),
-            POLL_RANGE.end()
-        ))
-    }
 }
 
 /// Wrapper because log::LevelFilter doesn't implement ValueEnum

@@ -2,6 +2,7 @@ use memflow::{types::Address, mem::MemoryView};
 
 use crate::{Error, CheatCtx, cs2dumper, structs::Vec3, traits::MemoryClass};
 
+#[derive(Debug, Clone, Copy)]
 pub struct CPlayerPawn(Address);
 
 impl MemoryClass for CPlayerPawn {
