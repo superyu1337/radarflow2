@@ -20,7 +20,7 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
     let mut last_round = -1;
     let mut last_gamephase = -1;
 
-    // Duration for a single tick on 128 ticks. Im assuming 128 ticks because I dont fucking know how to read the current tickrate off cs2 memory lol
+    // Duration for a single tick on 128 ticks. I'm assuming 128 ticks because I don't fucking know how to read the current tickrate off cs2 memory lol
     let target_interval = Duration::from_nanos(SECOND_AS_NANO / 128);
     
     loop {
@@ -132,7 +132,7 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
 
             // New tick, now we want to fetch our data
             if cur_tickcount != last_tickcount {
-                // We dont expect more than 16 entries in our radar data
+                // We don't expect more than 16 entries in our radar data.
                 let mut radar_data = Vec::with_capacity(16);
 
                 if cache.gamerules().bomb_planted(&mut ctx)? {
