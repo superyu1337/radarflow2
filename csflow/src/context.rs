@@ -81,20 +81,20 @@ impl CheatCtx {
         Ok(GameRules::new(ptr))
     }
 
-    // todo: seperate into own class
+    // todo: separate into own class
     pub fn get_entity_list(&mut self) -> Result<Address, Error> {
         let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwEntityList)?;
         Ok(ptr)
     }
     
-    // todo: seperate into own class
+    // todo: separate into own class
     pub fn highest_entity_index(&mut self) -> Result<i32, Error> {
         let game_entity_system = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameEntitySystem)?;
         let highest_index = self.process.read(game_entity_system + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex)?;
         Ok(highest_index)
     }
     
-    // todo: seperate into own class
+    // todo: separate into own class
     pub fn network_is_ingame(&mut self) -> Result<bool, Error> {
         let ptr = self.process.read_addr64(self.engine_module.base + cs2dumper::offsets::engine2_dll::dwNetworkGameClient)?;
         let signonstate: i32 = self.process.read(ptr + cs2dumper::offsets::engine2_dll::dwNetworkGameClient_signOnState)?;
