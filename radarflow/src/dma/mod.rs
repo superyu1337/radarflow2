@@ -19,6 +19,7 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
     let mut last_tickcount = -1;
     let mut last_round = -1;
     let mut last_gamephase = -1;
+    let mut last_bomb_dropped = false;
 
     // Duration for a single tick on 128 ticks. I'm assuming 128 ticks because I don't fucking know how to read the current tickrate off cs2 memory lol
     let target_interval = Duration::from_nanos(SECOND_AS_NANO / 128);
@@ -125,6 +126,15 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                 last_gamephase = cur_gamephase;
                 cache.invalidate();
                 log::info!("Invalidated cache! Reason: new gamephase");
+                continue;
+            }
+
+            let cur_bomb_dropped = cache.gamerules().bomb_dropped(&mut ctx)?;
+
+            if cur_bomb_dropped != last_bomb_dropped {
+                last_bomb_dropped = cur_bomb_dropped;
+                cache.invalidate();
+                log::info!("Invalidated cache! Reason: bomb drop status changed");
                 continue;
             }
 

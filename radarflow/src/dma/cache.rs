@@ -18,7 +18,7 @@ pub struct Cache {
 impl Cache {
     pub fn is_valid(&self) -> bool {
         if self.valid {
-            if self.timestamp.elapsed() > std::time::Duration::from_secs(60 * 3) {
+            if self.timestamp.elapsed() > std::time::Duration::from_secs(10) {
                 log::info!("Invalidated cache! Reason: time");
                 return false
             }
