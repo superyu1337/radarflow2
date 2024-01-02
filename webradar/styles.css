@@ -1,17 +1,43 @@
-body {
+body, html {
+    height: 100%;
     margin: 0;
-    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background-color: #000000; /* Change the background color as needed */
+}
+
+#canvasContainer {
+    aspect-ratio: 1 / 1;
+    width: 100vh; /* Initial half-screen size */
+    position: relative;
+    overflow: hidden;
+    transition: width 0.5s ease; /* Smooth transition */
+    float: left;
 }
 
 canvas {
     width: 100%;
     height: 100%;
-    overflow: hidden;
-    display: block;
-    object-fit: contain;
+}
+
+#settingsHolder {
+    visibility: hidden;
+    position: absolute;
+    top: inherit;
+    left: inherit;
+    width: inherit;
+    height: 20%;
+}
+
+#settingsHolder:hover .settings {
+    opacity: 1;
+}
+
+.settings {
+    visibility: visible;
+    opacity: 0;
+    padding: 10px;
+    background-color: rgba(25, 25, 25, 0.7); /* Semi-transparent white background */
+    transition: opacity 0.3s ease; /* Smooth transition */
 }

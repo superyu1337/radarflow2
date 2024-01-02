@@ -7,7 +7,14 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <div id="canvasContainer">
+        <div id="settingsHolder">
+            <div class="settings">
+                <button onclick="toggleZoom()">Toggle Zoom</button>
+            </div>
+        </div>
+        <canvas id="canvas"></canvas>
+    </div>
     <script src="script.js"></script>
 </body>
 </html>

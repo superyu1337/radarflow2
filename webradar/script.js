@@ -414,3 +414,7 @@ addEventListener("DOMContentLoaded", (e) => {
     console.log(`[radarflow] connecting to ${websocketAddr}`)
     connect()
 });
+
+function toggleZoom() {
+    shouldZoom = !shouldZoom
+}
