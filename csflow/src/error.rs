@@ -32,5 +32,8 @@ pub enum Error {
     MemflowPartialf32(#[from] memflow::error::PartialError<f32>),
 
     #[error("memflow partial error when reading u8: {0}")]
-    MemflowPartialu8(#[from] memflow::error::PartialError<u8>)
+    MemflowPartialu8(#[from] memflow::error::PartialError<u8>),
+
+    #[error("memflow partial error when reading Vec<u8>: {0}")]
+    MemflowPartialVecu8(#[from] memflow::error::PartialError<Vec<u8>>)
 }

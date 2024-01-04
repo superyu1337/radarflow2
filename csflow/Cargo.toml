@@ -9,8 +9,8 @@ description = "SDK for CS2 cheats utilizing memflow"
 
 [dependencies]
 # memory
-memflow = "0.2.0"
 dataview = "1.0.1"
+memflow = { git = "https://github.com/memflow/memflow.git", rev = "c19d870" }
 
 # logging
 log = "0.4.19"

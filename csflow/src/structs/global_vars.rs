@@ -1,5 +1,5 @@
 use memflow::{types::Address, mem::MemoryView};
-use crate::{traits::MemoryClass, CheatCtx, Error};
+use crate::{traits::MemoryClass, CheatCtx, Error, cached_view::INVALIDATE_ALWAYS};
 
 #[derive(Debug, Clone, Copy)]
 pub struct GlobalVars(Address);
@@ -16,6 +16,7 @@ impl MemoryClass for GlobalVars {
 
 impl GlobalVars {
     pub fn real_time(&self, ctx: &mut CheatCtx) -> Result<f32, Error> {
+        ctx.cache_controller.set_next_flags(INVALIDATE_ALWAYS);
         Ok(ctx.process.read(self.0)?)
     }
 
@@ -40,7 +41,7 @@ impl GlobalVars {
     }
 
     pub fn map_name(&self, ctx: &mut CheatCtx) -> Result<String, Error> {
-        let ptr = ctx.process.read_addr64(self.0 + 0x188)?;
+        let ptr = ctx.memory.read_addr64(self.0 + 0x188)?;
         Ok(ctx.process.read_char_string_n(ptr, 32)?)
     }
 }

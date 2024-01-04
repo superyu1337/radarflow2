@@ -1,16 +1,23 @@
-use memflow::{plugins::{IntoProcessInstanceArcBox, Inventory, ConnectorArgs, args::Args}, os::{ModuleInfo, Os, Process}, mem::MemoryView, types::Address};
+use memflow::{plugins::{IntoProcessInstanceArcBox, Inventory, ConnectorArgs, args::Args}, os::{ModuleInfo, Os, Process}, mem::{MemoryView, CachedView}, types::Address};
+use memflow::prelude::v1::size;
 
 use crate::{error::Error, structs::{CPlayerController, CBaseEntity, GlobalVars, GameRules}, cs2dumper, traits::MemoryClass};
 
+use self::cached_view::{ExternallyControlledValidator, CustomValidator, INVALIDATE_TICK};
+
+pub mod cached_view;
+
 pub struct CheatCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
+    pub memory: CachedView<'static, IntoProcessInstanceArcBox<'static>, CustomValidator>,
+    pub cache_controller: ExternallyControlledValidator,
     pub client_module: ModuleInfo,
     pub engine_module: ModuleInfo,
 }
 
 impl CheatCtx {
     fn check_version(&mut self) -> Result<(), Error> {
-        let game_build_number: u32 = self.process.read(self.engine_module.base + cs2dumper::offsets::engine2_dll::dwBuildNumber)?;
+        let game_build_number: u32 = self.memory.read(self.engine_module.base + cs2dumper::offsets::engine2_dll::dwBuildNumber)?;
         let offset_build_number = cs2dumper::offsets::game_info::buildNumber;
 
         if game_build_number as usize != offset_build_number {
@@ -49,8 +56,24 @@ impl CheatCtx {
 
         let engine_module = process.module_by_name("engine2.dll")?;
 
+        // Create the validator
+        let mut validator_controller = ExternallyControlledValidator::new();
+        let validator = validator_controller.validator();
+
+        // Create CachedView over the processes MemoryView
+        let proc_arch = process.info().proc_arch;
+        let cached_process = CachedView::builder(process.clone())
+            .arch(proc_arch)
+            .validator(validator)
+            .cache_size(size::mb(10))
+            .build()?;
+
+        validator_controller.set_next_flags(INVALIDATE_TICK);
+
         let mut ctx = Self {
-            process,
+            process: process,
+            memory: cached_process,
+            cache_controller: validator_controller,
             client_module,
             engine_module,
         };
@@ -61,29 +84,29 @@ impl CheatCtx {
     }
 
     pub fn get_local(&mut self) -> Result<CPlayerController, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwLocalPlayerController)?;
+        let ptr = self.memory.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwLocalPlayerController)?;
         Ok(CPlayerController::new(ptr))
     }
-    
+
     pub fn get_plantedc4(&mut self) -> Result<CBaseEntity, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwPlantedC4)?;
-        let ptr2 = self.process.read_addr64(ptr)?;
+        let ptr = self.memory.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwPlantedC4)?;
+        let ptr2 = self.memory.read_addr64(ptr)?;
         Ok(CBaseEntity::new(ptr2))
     }
     
     pub fn get_globals(&mut self) -> Result<GlobalVars, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGlobalVars)?;
+        let ptr = self.memory.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGlobalVars)?;
         Ok(GlobalVars::new(ptr))
     }
 
     pub fn get_gamerules(&mut self) -> Result<GameRules, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
+        let ptr = self.memory.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwGameRules)?;
         Ok(GameRules::new(ptr))
     }
 
     // todo: separate into own class
     pub fn get_entity_list(&mut self) -> Result<Address, Error> {
-        let ptr = self.process.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwEntityList)?;
+        let ptr = self.memory.read_addr64(self.client_module.base + cs2dumper::offsets::client_dll::dwEntityList)?;
         Ok(ptr)
     }
     

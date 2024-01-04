@@ -1,4 +1,4 @@
-use csflow::{memflow::Address, enums::PlayerType, structs::{GlobalVars, GameRules}, traits::MemoryClass};
+use csflow::{memflow::Address, enums::PlayerType, structs::{GlobalVars, GameRules, CBaseEntity}, traits::{MemoryClass, BaseEntity}, CheatCtx};
 
 #[derive(Clone, Copy)]
 pub enum CachedEntity {
@@ -18,7 +18,7 @@ pub struct Cache {
 impl Cache {
     pub fn is_valid(&self) -> bool {
         if self.valid {
-            if self.timestamp.elapsed() > std::time::Duration::from_secs(10) {
+            if self.timestamp.elapsed() > std::time::Duration::from_secs(60 * 3) {
                 log::info!("Invalidated cache! Reason: time");
                 return false
             }
@@ -56,6 +56,107 @@ impl Cache {
 
     pub fn gamerules(&self) -> GameRules {
         self.gamerules
+    }
+
+    pub fn build(&self, ctx: &mut CheatCtx) -> anyhow::Result<Self> {
+        let mut cached_entities = Vec::new();
+
+        let globals = ctx.get_globals()?;
+        let highest_index = ctx.highest_entity_index()?;
+        let entity_list = ctx.get_entity_list()?;
+        let gamerules = ctx.get_gamerules()?;
+
+        let local = ctx.get_local()?;
+
+        if local.get_pawn(ctx, entity_list)?.is_some() {
+
+            cached_entities.push(CachedEntity::Player {  
+                ptr: local.ptr(),
+                player_type: PlayerType::Local,
+            });
+
+            // If the bomb is dropped, do a reverse entity list loop with early exit when we found the bomb.
+            if gamerules.bomb_dropped(ctx)? {
+                for idx in (0..=highest_index).rev() {
+                    if let Some(entity) = CBaseEntity::from_index(ctx, entity_list, idx)? {
+                        if entity.is_dropped_c4(ctx)? {
+                            cached_entities.push(CachedEntity::Bomb {
+                                ptr: entity.ptr()
+                            });
+                            break;
+                        }
+                    }
+                }
+            }
+
+            //let mut next = local.next_by_class(ctx)?;
+            //println!("next: {:X}", next.ptr());
+
+            for idx in 0..=64 {
+                if let Some(entity) = CBaseEntity::from_index(ctx, entity_list, idx)? {
+                    if entity.is_cs_player_controller(ctx)? {
+                        let controller = entity.to_player_controller();
+
+                        let player_type = {
+                            match controller.get_player_type(ctx, &local)? {
+                                Some(t) => {
+                                    if t == PlayerType::Spectator { 
+                                        continue;
+                                    } else { t }
+                                },
+                                None => {
+                                    continue;
+                                },
+                            }
+                        };
+
+                        cached_entities.push(CachedEntity::Player {
+                            ptr: entity.ptr(),
+                            player_type
+                        });
+                    }
+                }
+            }
+
+
+            /*
+            while !next.ptr().is_null() && next.ptr().is_valid() {
+                let player_type = {
+                    match next.get_player_type(ctx, &local)? {
+                        Some(t) => {
+                            if t == PlayerType::Spectator { 
+                                next = next.next_by_class(ctx)?;
+                                continue;
+                            } else { t }
+                        },
+                        None => {
+                            next = next.next_by_class(ctx)?;
+                            continue;
+                        },
+                    }
+                };
+
+                cached_entities.push(CachedEntity::Player {  
+                    ptr: next.ptr(),
+                    player_type,
+                });
+
+                next = next.next_by_class(ctx)?;
+                println!("next: {:X}", next.ptr());
+            }
+            */
+        }
+
+        let cache = CacheBuilder::new()
+            .entity_cache(cached_entities)
+            .entity_list(entity_list)
+            .globals(globals)
+            .gamerules(gamerules)
+            .build()?;
+
+        log::info!("Rebuilt cache.");
+
+        Ok(cache)
     }
 }
 

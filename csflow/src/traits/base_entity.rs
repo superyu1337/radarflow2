@@ -8,4 +8,6 @@ pub trait BaseEntity {
     fn from_index(ctx: &mut CheatCtx, entity_list: Address, index: i32) -> Result<Option<Self>, Error> where Self: std::marker::Sized;
     fn pos(&self, ctx: &mut CheatCtx) -> Result<Vec3, Error>;
     fn class_name(&self, ctx: &mut CheatCtx) -> Result<String, Error>;
+    fn next_by_class(&self, ctx: &mut CheatCtx) -> Result<Self, Error> where Self: std::marker::Sized;
+    fn previous_by_class(&self, ctx: &mut CheatCtx) -> Result<Self, Error> where Self: std::marker::Sized;
 }

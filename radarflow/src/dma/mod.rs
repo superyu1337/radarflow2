@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use csflow::{CheatCtx, Connector, memflow::Process, traits::{MemoryClass, BaseEntity}, enums::PlayerType, structs::{CBaseEntity, CPlayerController}};
+use csflow::{CheatCtx, Connector, memflow::Process, traits::{MemoryClass, BaseEntity}, structs::{CBaseEntity, CPlayerController}, enums::{PlayerType, TeamID}};
 use tokio::{sync::RwLock, time::Duration};
 
-use crate::{comms::{RadarData, EntityData, BombData, PlayerData}, dma::cache::CacheBuilder};
+use crate::comms::{RadarData, EntityData, BombData, PlayerData};
 
 use self::cache::Cache;
 
@@ -32,66 +32,20 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
         }
 
         if !cache.is_valid() {
-            let mut cached_entities = Vec::new();
-
-            let globals = ctx.get_globals()?;
-            let highest_index = ctx.highest_entity_index()?;
-            let entity_list = ctx.get_entity_list()?;
-            let gamerules = ctx.get_gamerules()?;
-
-            let local = ctx.get_local()?;
-            
-            if local.get_pawn(&mut ctx, entity_list)?.is_some() {
-                cached_entities.push(cache::CachedEntity::Player {
-                    ptr: local.ptr(),
-                    player_type: PlayerType::Local 
-                });
-
-                for idx in 1..=highest_index {
-                    if let Some(entity) = CBaseEntity::from_index(&mut ctx, entity_list, idx)? {
-
-                        let class_name = entity.class_name(&mut ctx)?;
-
-                        match class_name.as_str() {
-                            "weapon_c4" => {
-                                cached_entities.push(cache::CachedEntity::Bomb {
-                                    ptr: entity.ptr()
-                                })
-                            },
-                            "cs_player_controller" => {
-                                let controller = entity.to_player_controller();
-
-                                let player_type = {
-                                    match controller.get_player_type(&mut ctx, &local)? {
-                                        Some(t) => {
-                                            if t == PlayerType::Spectator { continue } else { t }
-                                        },
-                                        None => { continue },
-                                    }
-                                };
-
-                                cached_entities.push(cache::CachedEntity::Player {
-                                    ptr: entity.ptr(),
-                                    player_type,
-                                })
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            
-            cache = CacheBuilder::new()
-                .entity_cache(cached_entities)
-                .entity_list(entity_list)
-                .globals(globals)
-                .gamerules(gamerules)
-                .build()?;
-
-            log::info!("Rebuilt cache.");
+            log::debug!("Rebuilding cache!");
+            let cache_start_stamp = tokio::time::Instant::now();
+            cache = cache.build(&mut ctx)?;
+            let elapsed = cache_start_stamp.elapsed();
+            log::info!("cache rebuild rate: {:.2}Hz", SECOND_AS_NANO as f64 / start_stamp.elapsed().as_nanos() as f64);
+            log::info!("cache rebuilt took: {}ns", elapsed.as_nanos());
+            log::info!("loop target: {}ns", target_interval.as_nanos());
         }
 
         if ctx.network_is_ingame()? {
+            let cur_tickcount = cache.globals().tick_count(&mut ctx)?;
+            //println!("tick_count: {}", tick_count);
+            ctx.cache_controller.set_tick_count(cur_tickcount);
+
             // Check if mapname is "<empty>"
             // That means we are not in-game, so we can just write empty radar data and run the next loop.
             let map_name = cache.globals().map_name(&mut ctx)?;
@@ -102,11 +56,9 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
 
                 let mut data = data_lock.write().await;
                 *data = RadarData::empty();
-                continue;
             } else if map_name.is_empty() { // Check if mapname is empty, this usually means a bad globals pointer -> rebuild our cache
                 cache.invalidate();
                 log::info!("Invalidated cache! Reason: invalid globals pointer");
-                continue;
             }
 
             let cur_round = cache.gamerules().total_rounds_played(&mut ctx)?;
@@ -116,7 +68,6 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                 last_round = cur_round;
                 cache.invalidate();
                 log::info!("Invalidated cache! Reason: new round");
-                continue;
             }
 
             let cur_gamephase = cache.gamerules().game_phase(&mut ctx)?;
@@ -126,7 +77,6 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                 last_gamephase = cur_gamephase;
                 cache.invalidate();
                 log::info!("Invalidated cache! Reason: new gamephase");
-                continue;
             }
 
             let cur_bomb_dropped = cache.gamerules().bomb_dropped(&mut ctx)?;
@@ -135,12 +85,8 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                 last_bomb_dropped = cur_bomb_dropped;
                 cache.invalidate();
                 log::info!("Invalidated cache! Reason: bomb drop status changed");
-                continue;
             }
 
-            let cur_tickcount = cache.globals().tick_count(&mut ctx)?;
-
-            // New tick, now we want to fetch our data
             if cur_tickcount != last_tickcount {
                 // We don't expect more than 16 entries in our radar data.
                 let mut radar_data = Vec::with_capacity(16);
@@ -155,7 +101,7 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                         ))
                     );
                 }
-    
+
                 for cached_data in cache.entity_cache() {
                     match cached_data {
                         cache::CachedEntity::Bomb { ptr } => {
@@ -179,8 +125,13 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                                 if pawn.is_alive(&mut ctx)? {
                                     let pos = pawn.pos(&mut ctx)?;
                                     let yaw = pawn.angles(&mut ctx)?.y;
-                                    let has_bomb = pawn.has_c4(&mut ctx, cache.entity_list())?;
-                        
+
+                                    let has_bomb = {
+                                        if controller.get_team(&mut ctx)? == Some(TeamID::T) {
+                                            pawn.has_c4(&mut ctx, cache.entity_list())?
+                                        } else {false}
+                                    };
+
                                     radar_data.push(
                                         EntityData::Player(
                                             PlayerData::new(
@@ -197,14 +148,14 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
                     }
                 }
 
+                last_tickcount = cur_tickcount;
+
                 let mut data = data_lock.write().await;
                 *data = RadarData::new(
                     true,
                     map_name,
                     radar_data
                 );
-
-                last_tickcount = cur_tickcount;
             }
         }
 
@@ -215,16 +166,18 @@ pub async fn run(connector: Connector, pcileech_device: String, data_lock: Arc<R
             // This gives us the remaining time we can sleep in our loop
             Some(t) => t,
             // No time left, start next loop.
-            None => continue
+            None => { Duration::ZERO }
         };
 
-        // On linux we may use tokio_timerfd for a more finely grained sleep function
-        #[cfg(target_os = "linux")]
-        tokio_timerfd::sleep(remaining).await?;
-
-        // On non linux build targets we need to use the regular sleep function, this one is only accurate to millisecond precision 
-        #[cfg(not(target_os = "linux"))]
-        tokio::time::sleep(remaining).await;
+        if !remaining.is_zero() || true {
+            // On linux we may use tokio_timerfd for a more finely grained sleep function
+            #[cfg(target_os = "linux")]
+            tokio_timerfd::sleep(remaining).await?;
+    
+            // On non linux build targets we need to use the regular sleep function, this one is only accurate to millisecond precision 
+            #[cfg(not(target_os = "linux"))]
+            tokio::time::sleep(remaining).await;
+        }
 
         log::debug!("poll rate: {:.2}Hz", SECOND_AS_NANO as f64 / start_stamp.elapsed().as_nanos() as f64);
         log::debug!("elapsed: {}ns", elapsed.as_nanos());

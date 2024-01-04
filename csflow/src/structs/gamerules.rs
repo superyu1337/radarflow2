@@ -16,20 +16,20 @@ impl MemoryClass for GameRules {
 
 impl GameRules {
     pub fn bomb_dropped(&self, ctx: &mut CheatCtx) -> Result<bool, Error> {
-        let data: u8 = ctx.process.read(self.0 + cs2dumper::client::C_CSGameRules::m_bBombDropped)?;
+        let data: u8 = ctx.memory.read(self.0 + cs2dumper::client::C_CSGameRules::m_bBombDropped)?;
         Ok(data != 0)
     }
 
     pub fn total_rounds_played(&self, ctx: &mut CheatCtx) -> Result<i32, Error> {
-        Ok(ctx.process.read(self.0 + cs2dumper::client::C_CSGameRules::m_totalRoundsPlayed)?)
+        Ok(ctx.memory.read(self.0 + cs2dumper::client::C_CSGameRules::m_totalRoundsPlayed)?)
     }
 
     pub fn game_phase(&self, ctx: &mut CheatCtx) -> Result<i32, Error> {
-        Ok(ctx.process.read(self.0 + cs2dumper::client::C_CSGameRules::m_gamePhase)?)
+        Ok(ctx.memory.read(self.0 + cs2dumper::client::C_CSGameRules::m_gamePhase)?)
     }
 
     pub fn bomb_planted(&self, ctx: &mut CheatCtx) -> Result<bool, Error> {
-        let data: u8 = ctx.process.read(self.0 + cs2dumper::client::C_CSGameRules::m_bBombPlanted)?;
+        let data: u8 = ctx.memory.read(self.0 + cs2dumper::client::C_CSGameRules::m_bBombPlanted)?;
         Ok(data != 0)
     }
 }
