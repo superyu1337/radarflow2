@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["CBaseEntity","CPlayerController","CPlayerPawn","Vec3"]};

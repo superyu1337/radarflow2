@@ -1,5 +1,4 @@
 /target
-csflow/src/cs2dumper/offsets.rs
-csflow/src/cs2dumper/engine2.rs
-csflow/src/cs2dumper/client.rs
-webradar_rewrite
+/src/dma/cs2dumper/offsets.rs
+/src/dma/cs2dumper/client.rs
+/src/dma/cs2dumper/engine2.rs
