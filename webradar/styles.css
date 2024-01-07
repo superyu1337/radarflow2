@@ -10,6 +10,7 @@ body {
 
 #canvasContainer {
     aspect-ratio: 1 / 1;
+    height: 100vh;
     position: relative;
     overflow: hidden;
     transition: width 0.5s ease; /* Smooth transition */

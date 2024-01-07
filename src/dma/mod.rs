@@ -1,0 +1,190 @@
+use std::{thread, time::{Duration, Instant}};
+
+use memflow::{os::Process, types::Address, mem::MemoryView};
+
+use crate::{enums::{TeamID, PlayerType}, comms::{EntityData, PlayerData, RadarData, ArcRwlockRadarData, BombData}};
+
+use self::{context::DmaCtx, threaddata::CsData};
+
+mod context;
+mod threaddata;
+mod cs2dumper;
+
+pub use context::Connector;
+
+pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_device: String) -> anyhow::Result<()> {
+    let mut ctx = DmaCtx::setup(connector, pcileech_device)?;
+    let mut data = CsData::default();
+    
+    // For read timing
+    let mut last_bomb_dropped = false;
+    let mut last_bomb_planted = false;
+    let mut last_tick_count = 0;
+    let mut last_big_read = Instant::now();
+
+    // For frequency info
+    let mut start_stamp = Instant::now();
+    let mut iters = 0;
+    let mut freq = 0;
+
+    data.update_pointers(&mut ctx);
+    data.update_common(&mut ctx);
+    data.update_players(&mut ctx);
+    data.update_bomb(&mut ctx);
+
+    loop {
+        if ctx.process.state().is_dead() {
+            break;
+        }
+
+        if last_big_read.elapsed().as_millis() > 10000 {
+            data.update_pointers(&mut ctx);
+            data.update_players(&mut ctx);
+            last_big_read = Instant::now();
+        }
+
+        data.update_common(&mut ctx);
+
+        // Bomb update
+        if (data.bomb_dropped && !last_bomb_dropped) || (data.bomb_planted && !last_bomb_planted) {
+            data.update_bomb(&mut ctx);
+        }
+
+        if (!data.bomb_dropped && last_bomb_dropped) || !data.bomb_planted {
+            data.recheck_bomb_holder = true;
+        }
+
+        last_bomb_dropped = data.bomb_dropped;
+        last_bomb_planted = data.bomb_planted;
+
+        // Poll entity data
+        let ingame = !data.map.is_empty() && data.map != "<empty>";
+        let update_data = data.tick_count != last_tick_count;
+    
+        if ingame {
+            if !update_data {
+                continue;
+            }
+
+            let mut entity_data = Vec::new();
+
+            // Bomb
+            if data.bomb_dropped || data.bomb_planted {
+                let node = ctx.process.read_addr64(
+                    data.bomb + cs2dumper::client::C_BaseEntity::m_pGameSceneNode as u64
+                ).unwrap();
+                let pos = ctx.process.read(node + cs2dumper::client::CGameSceneNode::m_vecAbsOrigin).unwrap();
+    
+                entity_data.push(EntityData::Bomb(BombData::new(pos, data.bomb_planted)));
+            }
+
+            // Local player
+            let local_data = ctx.batched_player_read(
+                data.local.into(), data.local_pawn.into()
+            ).unwrap();
+
+            if local_data.health > 0 {
+                let has_bomb = {
+                    if data.bomb_planted {
+                        false
+                    } else if data.recheck_bomb_holder {
+                        if local_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
+                            let is_holder = ctx.has_c4(
+                                data.local_pawn.into(), data.entity_list.into()
+                            ).unwrap_or(false);
+
+                            if is_holder {
+                                data.bomb_holder = data.local.into();
+                                data.recheck_bomb_holder = false;
+                            }
+
+                            is_holder
+                        } else { false }
+                    } else { Address::from(data.local) == data.bomb_holder }
+                };
+
+                entity_data.push(
+                    EntityData::Player(
+                        PlayerData::new(
+                            local_data.pos, 
+                            local_data.yaw,
+                            PlayerType::Local,
+                            has_bomb
+                        )
+                    )
+                );
+            }
+
+            // Other players
+            for (controller, pawn) in &data.players {
+                let player_data = ctx.batched_player_read(*controller, *pawn).unwrap();
+
+                if player_data.health < 1 {
+                    continue;
+                }
+
+                let has_bomb = {
+                    if data.bomb_planted {
+                        false
+                    } else if data.recheck_bomb_holder {
+                        if player_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
+                            let is_holder = ctx.has_c4(*pawn, data.entity_list.into()).unwrap_or(false);
+
+                            if is_holder {
+                                data.bomb_holder = *controller;
+                                data.recheck_bomb_holder = false;
+                            }
+
+                            is_holder
+                        } else { false }
+                    } else { *controller == data.bomb_holder }
+                };
+
+                let player_type = {
+                    if local_data.team != player_data.team {
+                        PlayerType::Enemy
+                    } else if local_data.team == player_data.team {
+                        PlayerType::Team
+                    } else {
+                        PlayerType::Unknown
+                    }
+                };
+
+                entity_data.push(
+                    EntityData::Player(
+                        PlayerData::new(
+                            player_data.pos, 
+                            player_data.yaw,
+                            player_type,
+                            has_bomb
+                        )
+                    )
+                );
+            }
+
+            let mut radar = radar_data.write().await;
+            *radar = RadarData::new(
+                true,
+                data.map.clone(),
+                entity_data,
+                freq
+            );
+        } else {
+            let mut radar = radar_data.write().await;
+            *radar = RadarData::empty(freq);
+        }
+
+        last_tick_count = data.tick_count;
+        iters += 1;
+    
+        if start_stamp.elapsed().as_secs() > 1 {
+            freq = iters;
+            iters = 0;
+            start_stamp = Instant::now();
+        }
+    
+        thread::sleep(Duration::from_millis(1));
+    }
+
+    Ok(())
+}

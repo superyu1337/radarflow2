@@ -5,14 +5,16 @@ const enemyColor = "#ec040b"
 const bombColor = "#eda338"
 const textColor = "#d1d1d1"
 
-// Should zoom or not
+// Settings
 shouldZoom = true
+drawStats = true
 
 // Common
 canvas = null
 ctx = null
 
 // radarflow specific
+freq = 0
 image = null
 map = null
 mapName = null
@@ -32,6 +34,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
+//websocketAddr = "ws://localhost:8001/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -185,6 +188,16 @@ function render() {
                 ctx.fillStyle = textColor
                 ctx.fillText("Disconnected", 1024/2, 1024/2); 
             }
+        }
+
+        if (drawStats) {
+            ctx.font = "16px Arial";
+            ctx.textAlign = "left"
+            ctx.fillStyle = textColor
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "black"
+            ctx.strokeText(`${freq} Hz`, 2, 18)
+            ctx.fillText(`${freq} Hz`, 2, 18)
         }
     }
 
@@ -355,6 +368,8 @@ function connect() {
             } else {
                 let data = JSON.parse(event.data);
 
+                freq = data.freq;
+
                 if (data.ingame == false) {
                     mapName = null
                     entityData = null
@@ -417,4 +432,8 @@ addEventListener("DOMContentLoaded", (e) => {
 
 function toggleZoom() {
     shouldZoom = !shouldZoom
+}
+
+function toggleStats() {
+    drawStats = !drawStats
 }
