@@ -34,41 +34,42 @@ impl CsData {
         // If the bomb is dropped, do a reverse entity list loop with early exit when we found the bomb. ( Now with BATCHING!!! :O )
         if self.bomb_dropped {
 
-            // We search 16 entities at a time.
-            for chunk in &(0..=self.highest_index).rev().chunks(16) {
+            // We search in chunks of 128 indexes
+            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(128) {
+                let mut data_vec: Vec<(u64, i32)> = chunk
+                    .map(|idx| (0u64, idx))
+                    .collect();
 
-                let indexes: Vec<i32> = chunk.collect();
-
-                let mut data_array = [(0u64, 0i32); 16];
                 {
                     let mut batcher = ctx.process.batcher();
                     let ent_list: Address = self.entity_list.into();
 
-                    data_array.iter_mut().zip(indexes).for_each(|((data_ptr, data_idx), index)| {
-                        batcher.read_into(ent_list + 8 * (index >> 9) + 16, data_ptr);
-                        *data_idx = index;
+                    data_vec.iter_mut().for_each(|(data, idx)| {
+                        batcher.read_into(ent_list + 8 * (*idx >> 9) + 16, data);
                     });
                 }
 
                 {
                     let mut batcher = ctx.process.batcher();
-    
-                    data_array.iter_mut().for_each(|(ptr, index)| {
+        
+                    data_vec.iter_mut().for_each(|(ptr, index)| {
                         let handle: Address = (*ptr).into();
                         batcher.read_into(handle + 120 * (*index & 0x1FF), ptr);
                     });
                 }
 
                 // You can actually optimize this EVEN more
-                let bomb = data_array.into_iter().find(|(ptr, _)| {
+                let bomb = data_vec.into_iter().find(|(ptr, _)| {
                     // By doing this with a batcher too...
                     ctx.is_dropped_c4((*ptr).into()).unwrap_or(false)
                 });
 
                 if let Some(bomb) = bomb {
                     self.bomb = bomb.0.into();
+                    break;
                 }
             }
+
         } else if self.bomb_planted {
             let bomb = ctx.get_plantedc4()
                 .expect("Failed to get planted bomb");
