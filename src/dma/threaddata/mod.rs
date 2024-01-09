@@ -43,7 +43,7 @@ impl CsData {
         if self.bomb_dropped {
 
             // We search in chunks of 128 indexes
-            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(128) {
+            for chunk in &(0..=self.highest_index).rev().chunks(128) {
                 let mut data_vec: Vec<(u64, i32)> = chunk
                     .map(|idx| (0u64, idx))
                     .collect();
@@ -190,10 +190,8 @@ impl CsData {
                     if self.bomb_defuse_stamp.is_none() {
                         self.bomb_defuse_stamp = Some(Instant::now())
                     }
-                } else {
-                    if self.bomb_defuse_stamp.is_some() {
-                        self.bomb_defuse_stamp = None;
-                    }
+                } else if self.bomb_defuse_stamp.is_some() {
+                    self.bomb_defuse_stamp = None;
                 }
 
             } else {
