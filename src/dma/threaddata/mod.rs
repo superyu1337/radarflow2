@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use memflow::{mem::MemoryView, types::Address};
+use tokio::time::Instant;
 
 use super::{context::DmaCtx, cs2dumper};
 
@@ -24,6 +25,13 @@ pub struct CsData {
     pub tick_count: i32,
     pub bomb_dropped: bool,
     pub bomb_planted: bool,
+    pub bomb_planted_stamp: Option<Instant>,
+    pub bomb_plant_timer: f32,
+    pub bomb_being_defused: bool,
+    pub bomb_defuse_stamp: Option<Instant>,
+    pub bomb_defuse_length: f32,
+    pub bomb_exploded: bool,
+    pub bomb_defused: bool,
     pub highest_index: i32,
     pub map: String
 }
@@ -129,6 +137,9 @@ impl CsData {
         let mut bomb_dropped = 0u8;
         let mut bomb_planted = 0u8;
         let mut map_ptr = 0u64;
+        let mut bomb_being_defused = 0u8;
+        let mut bomb_exploded = 0u8;
+        let mut bomb_defused = 0u8;
 
         {
             // Globals
@@ -159,11 +170,52 @@ impl CsData {
             batcher.read_into(map_addr, &mut map_ptr);
         }
 
+        {
+            let mut batcher = ctx.process.batcher();
+            if self.bomb_planted {
+
+                batcher.read_into(self.bomb + cs2dumper::client::C_PlantedC4::m_flTimerLength , &mut self.bomb_plant_timer);
+                batcher.read_into(self.bomb + cs2dumper::client::C_PlantedC4::m_bBombDefused, &mut bomb_defused);
+                batcher.read_into(self.bomb + cs2dumper::client::C_PlantedC4::m_flDefuseLength, &mut self.bomb_defuse_length);
+                batcher.read_into(self.bomb + cs2dumper::client::C_PlantedC4::m_bHasExploded, &mut bomb_exploded);
+                batcher.read_into(self.bomb + cs2dumper::client::C_PlantedC4::m_bBeingDefused, &mut bomb_being_defused);
+
+                drop(batcher);
+
+                if self.bomb_planted_stamp.is_none() && !self.bomb.is_null() {
+                    self.bomb_planted_stamp = Some(Instant::now());
+                }
+
+                if self.bomb_being_defused {
+                    if self.bomb_defuse_stamp.is_none() {
+                        self.bomb_defuse_stamp = Some(Instant::now())
+                    }
+                } else {
+                    if self.bomb_defuse_stamp.is_some() {
+                        self.bomb_defuse_stamp = None;
+                    }
+                }
+
+            } else {
+                if self.bomb_planted_stamp.is_some() {
+                    self.bomb_planted_stamp = None;
+                }
+
+                if self.bomb_defuse_stamp.is_some() {
+                    self.bomb_defuse_stamp = None;
+                }
+            }
+        }
+
+
         let map_string = ctx.process.read_char_string_n(map_ptr.into(), 32).unwrap_or(String::from("<empty>"));
 
         self.map = map_string;
         self.bomb_dropped = bomb_dropped != 0;
         self.bomb_planted = bomb_planted != 0;
+        self.bomb_exploded = bomb_exploded != 0;
+        self.bomb_being_defused = bomb_being_defused != 0;
+        self.bomb_defused = bomb_defused != 0;
     }
 
     pub fn update_pointers(&mut self, ctx: &mut DmaCtx) {

@@ -54,6 +54,33 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             data.recheck_bomb_holder = true;
         }
 
+
+        let bomb_defuse_timeleft: f32 = {
+            if data.bomb_planted && !data.bomb_exploded && !data.bomb_defused {
+                if let Some(bomb_stamp) = data.bomb_planted_stamp {
+                    data.bomb_plant_timer - bomb_stamp.elapsed().as_secs_f32()
+                } else {
+                    0.0
+                }
+            } else {
+                0.0
+            }
+        };
+
+        let bomb_can_defuse: bool = {
+            if data.bomb_planted && !data.bomb_exploded && !data.bomb_defused {
+                if let (Some(bomb_stamp), Some(defuse_stamp)) = (data.bomb_planted_stamp, data.bomb_defuse_stamp) {
+                    let time_left = data.bomb_plant_timer - bomb_stamp.elapsed().as_secs_f32();
+                    let defuse_left = data.bomb_defuse_length - defuse_stamp.elapsed().as_secs_f32();
+                    time_left - defuse_left > 0.0
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        };
+
         last_bomb_dropped = data.bomb_dropped;
         last_bomb_planted = data.bomb_planted;
 
@@ -109,7 +136,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                             local_data.pos, 
                             local_data.yaw,
                             PlayerType::Local,
-                            has_bomb
+                            has_bomb,
+                            local_data.has_awp,
+                            local_data.is_scoped
                         )
                     )
                 );
@@ -156,7 +185,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                             player_data.pos, 
                             player_data.yaw,
                             player_type,
-                            has_bomb
+                            has_bomb,
+                            player_data.has_awp,
+                            player_data.is_scoped
                         )
                     )
                 );
@@ -167,7 +198,13 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                 true,
                 data.map.clone(),
                 entity_data,
-                freq
+                freq,
+                data.bomb_planted,
+                bomb_can_defuse,
+                bomb_defuse_timeleft,
+                data.bomb_exploded,
+                data.bomb_being_defused,
+                data.bomb_defuse_length
             );
         } else {
             let mut radar = radar_data.write().await;

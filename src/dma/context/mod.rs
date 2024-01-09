@@ -91,6 +91,8 @@ impl DmaCtx {
         let mut yaw = 0f32;
         let mut health = 0u32;
         let mut team = 0i32;
+        let mut clipping_weapon = 0u64;
+        let mut is_scoped = 0u8;
 
         {
             let mut batcher = MemoryViewBatcher::new(&mut self.process);
@@ -98,15 +100,29 @@ impl DmaCtx {
             batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_angEyeAngles + 4, &mut yaw);
             batcher.read_into(pawn + cs2dumper::client::C_BaseEntity::m_iHealth, &mut health);
             batcher.read_into(controller + cs2dumper::client::C_BaseEntity::m_iTeamNum, &mut team);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_pClippingWeapon, &mut clipping_weapon);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_bIsScoped, &mut is_scoped);
         }
     
         let team = TeamID::from_i32(team);
+
+        let has_awp = {
+            let clipping_weapon: Address = clipping_weapon.into();
+            let items_def_idx_addr = clipping_weapon + cs2dumper::client::C_EconEntity::m_AttributeManager 
+                + cs2dumper::client::C_AttributeContainer::m_Item + cs2dumper::client::C_EconItemView::m_iItemDefinitionIndex;
     
+            let items_def_idx: i16 = self.process.read(items_def_idx_addr)?;
+
+            items_def_idx == 9
+        };
+
         Ok(BatchedPlayerData {
             pos,
             yaw,
             team,
-            health
+            health,
+            has_awp,
+            is_scoped: is_scoped != 0
         })
     }
 
@@ -174,9 +190,12 @@ impl DmaCtx {
 }
 
 
+#[derive(Debug)]
 pub struct BatchedPlayerData {
     pub pos: Vec3,
     pub yaw: f32,
     pub team: Option<TeamID>,
     pub health: u32,
+    pub has_awp: bool,
+    pub is_scoped: bool,
 }

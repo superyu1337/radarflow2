@@ -14,6 +14,7 @@ canvas = null
 ctx = null
 
 // radarflow specific
+radarData = null
 freq = 0
 image = null
 map = null
@@ -170,11 +171,63 @@ function render() {
                             fillStyle, 
                             data.Player.isDormant,
                             data.Player.hasBomb,
-                            data.Player.yaw
+                            data.Player.yaw,
+                            data.Player.hasAwp,
+                            data.Player.playerType,
+                            data.Player.isScoped
                         )
                     }
                 });
             }
+
+            if (radarData != null) {
+                if (radarData.bombPlanted && !radarData.bombExploded && radarData.bombDefuseTimeleft >= 0) {
+
+                    let maxWidth = 1024-128-128;
+                    let timeleft = radarData.bombDefuseTimeleft;
+                    //let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
+    
+                    // Base bar
+                    ctx.fillStyle = "black"
+                    ctx.fillRect(128, 16, maxWidth, 16)
+                    
+                    // Bomb timer
+                    if (radarData.bombBeingDefused) {
+                        if (radarData.bombCanDefuse) {
+                            ctx.fillStyle = teamColor
+                        } else {
+                            ctx.fillStyle = enemyColor
+                        }
+                    } else {
+                        ctx.fillStyle = bombColor
+                    }
+
+                    ctx.fillRect(130, 18, (maxWidth-2) * (timeleft / 40), 12)
+
+                    ctx.font = "24px Arial";
+                    ctx.textAlign = "center"
+                    ctx.textBaseline = "middle"
+                    ctx.fillStyle = textColor
+                    ctx.fillText(`${timeleft.toFixed(1)}s`, 1024/2, 28+24); 
+                    
+                    // Defuse time lines
+                    ctx.strokeStyle = "black"
+                    ctx.lineWidth = 2
+
+                    // Kit defuse
+                    ctx.beginPath()
+                    ctx.moveTo(128 + (maxWidth * (5 / 40)), 16)
+                    ctx.lineTo(128 + (maxWidth * (5 / 40)), 32)
+                    ctx.stroke()
+
+                    // Normal defuse
+                    ctx.beginPath()
+                    ctx.moveTo(130 + (maxWidth-2) * (10 / 40), 16)
+                    ctx.lineTo(130 + (maxWidth-2) * (10 / 40), 32)
+                    ctx.stroke()
+                }
+            }
+
         } else {
             if (websocket != null) {
                 ctx.font = "100px Arial";
@@ -247,7 +300,7 @@ function drawBomb(pos, planted) {
     }
 }
 
-function drawEntity(pos, fillStyle, dormant, hasBomb, yaw) {
+function drawEntity(pos, fillStyle, dormant, hasBomb, yaw, hasAwp, playerType, isScoped) {
     if (map == null)
         return
 
@@ -272,11 +325,33 @@ function drawEntity(pos, fillStyle, dormant, hasBomb, yaw) {
         ctx.fillText("?", pos.x, pos.y); 
     } else {
 
+        if (hasAwp) {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
+            ctx.fillStyle = "orange";
+            ctx.fill();
+            circleRadius -= 2;
+        }
+
         // Draw circle
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
         ctx.fillStyle = fillStyle;
         ctx.fill();
+
+        if (hasAwp && false) {
+
+            let style = "yellow"
+
+            if (playerType == "Enemy") {
+                style = "orange"
+            }
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, circleRadius / 1.5, 0, 2 * Math.PI);
+            ctx.fillStyle = style;
+            ctx.fill();
+        }
 
         if (hasBomb) {
             ctx.beginPath();
@@ -319,6 +394,22 @@ function drawEntity(pos, fillStyle, dormant, hasBomb, yaw) {
 
         ctx.fillStyle = 'white'
         ctx.fill();
+
+        if (isScoped) {
+            const lineOfSightX = arrowHeadX + 1024 * Math.cos(yaw * (Math.PI / 180))
+            const lineOfSightY = arrowHeadY - 1024 * Math.sin(yaw * (Math.PI / 180))
+            ctx.beginPath();
+            ctx.moveTo(arrowHeadX, arrowHeadY);
+            ctx.lineTo(lineOfSightX, lineOfSightY);
+
+            if (playerType == "Enemy")
+                ctx.strokeStyle = enemyColor
+            else
+                ctx.strokeStyle = teamColor
+
+            ctx.strokeWidth = 1;
+            ctx.stroke();
+        }
     }
 }
 
@@ -367,7 +458,7 @@ function connect() {
                 console.log("[radarflow] Server had an unknown error")
             } else {
                 let data = JSON.parse(event.data);
-
+                radarData = data; 
                 freq = data.freq;
 
                 if (data.ingame == false) {
