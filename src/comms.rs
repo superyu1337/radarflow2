@@ -59,8 +59,11 @@ pub struct RadarData {
     /// Frequency at which the DMA thread polls info
     freq: usize,
     ingame: bool,
+    #[serde(rename = "mapName")]
     map_name: String,
+    #[serde(rename = "playerData")]
     player_data: Vec<PlayerData>,
+    #[serde(rename = "bombData")]
     bomb_data: BombData,
 }
 

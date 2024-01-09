@@ -115,9 +115,11 @@ function render() {
         if (loaded) {
             update = false
 
-            // Iterate through the array and update the min/max values
-            if (radarData != null && map != null && image != null && shouldZoom) {
+            if (radarData == null)
+                return
 
+            // Iterate through the array and update the min/max values
+            if (map != null && image != null && shouldZoom) {
                 let minX = Infinity
                 let minY = Infinity
                 let maxX = -Infinity
@@ -146,23 +148,11 @@ function render() {
 
             if (radarData != null) {
                 radarData.playerData.forEach((pdata) => {
-                    let fillStyle = localColor
-
-                    switch (pdata.playerType) {
-                        case "Team":
-                            fillStyle = teamColor
-                            break;
-
-                        case "Enemy":
-                            fillStyle = enemyColor
-                            break;
-                    }
-
                     drawEntity(pdata)
                 });
 
                 if (radarData.bombData.planted || radarData.bombData.dropped) {
-                    drawBomb(radarData.bombData.pos, radarData.bombData.planted)
+                    drawBomb(radarData.bombData)
                 }
             }
 
@@ -256,17 +246,17 @@ function drawBomb(bdata) {
                 ctx.fillStyle = bombColor
             }
 
-            ctx.fillRect(130, 18, (maxWidth-2) * (timeleft / 40), 12)
+            ctx.fillRect(130, 18, (maxWidth-2) * (bdata.timeleft / 40), 12)
 
             ctx.font = "24px Arial";
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.fillStyle = textColor
-            ctx.fillText(`${timeleft.toFixed(1)}s`, 1024/2, 28+24); 
+            ctx.fillText(`${bdata.timeleft.toFixed(1)}s`, 1024/2, 28+24); 
             
             // Defuse time lines
             ctx.strokeStyle = "black"
-            ctx.lineWidth = 2
+            ctx.lineWidth = 3
 
             // Kit defuse
             ctx.beginPath()
@@ -318,6 +308,18 @@ function drawEntity(pdata) {
         circleRadius -= 2;
     }
 
+    let fillStyle = localColor
+
+    switch (pdata.playerType) {
+        case "Team":
+            fillStyle = teamColor
+            break;
+
+        case "Enemy":
+            fillStyle = enemyColor
+            break;
+    }
+
     // Draw circle
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
@@ -335,16 +337,16 @@ function drawEntity(pdata) {
     }
 
     // Calculate arrowhead points
-    const arrowHeadX = pos.x + radius * Math.cos(yaw * (Math.PI / 180))
-    const arrowHeadY = pos.y - radius * Math.sin(yaw * (Math.PI / 180))
+    const arrowHeadX = pos.x + radius * Math.cos(pdata.yaw * (Math.PI / 180))
+    const arrowHeadY = pos.y - radius * Math.sin(pdata.yaw * (Math.PI / 180))
 
-    const arrowCornerX1 = pos.x + distance * Math.cos((yaw - arrowWidth) * (Math.PI / 180))
-    const arrowCornerY1 = pos.y - distance * Math.sin((yaw - arrowWidth) * (Math.PI / 180))
+    const arrowCornerX1 = pos.x + distance * Math.cos((pdata.yaw - arrowWidth) * (Math.PI / 180))
+    const arrowCornerY1 = pos.y - distance * Math.sin((pdata.yaw - arrowWidth) * (Math.PI / 180))
 
-    const arrowCornerX2 = pos.x + distance * Math.cos((yaw + arrowWidth) * (Math.PI / 180))
-    const arrowCornerY2 = pos.y - distance * Math.sin((yaw + arrowWidth) * (Math.PI / 180))
+    const arrowCornerX2 = pos.x + distance * Math.cos((pdata.yaw + arrowWidth) * (Math.PI / 180))
+    const arrowCornerY2 = pos.y - distance * Math.sin((pdata.yaw + arrowWidth) * (Math.PI / 180))
 
-    const cicleYaw = 90-yaw
+    const cicleYaw = 90-pdata.yaw
     const startAngle = degreesToRadians(cicleYaw-arrowWidth)-Math.PI/2
     const endAngle = degreesToRadians(cicleYaw+arrowWidth)-Math.PI/2
 
@@ -362,8 +364,8 @@ function drawEntity(pdata) {
     ctx.fill();
 
     if (pdata.isScoped) {
-        const lineOfSightX = arrowHeadX + 1024 * Math.cos(yaw * (Math.PI / 180))
-        const lineOfSightY = arrowHeadY - 1024 * Math.sin(yaw * (Math.PI / 180))
+        const lineOfSightX = arrowHeadX + 1024 * Math.cos(pdata.yaw * (Math.PI / 180))
+        const lineOfSightY = arrowHeadY - 1024 * Math.sin(pdata.yaw * (Math.PI / 180))
         ctx.beginPath();
         ctx.moveTo(arrowHeadX, arrowHeadY);
         ctx.lineTo(lineOfSightX, lineOfSightY);
