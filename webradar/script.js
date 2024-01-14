@@ -20,7 +20,6 @@ image = null
 map = null
 mapName = null
 loaded = false
-entityData = null
 update = false
 
 /// Radarflow zoom in
@@ -116,28 +115,38 @@ function render() {
         if (loaded) {
             update = false
 
-            // Iterate through the array and update the min/max values
-            if (entityData != null && map != null && image != null && shouldZoom) {
+            if (radarData == null)
+                return
 
+            // Iterate through the array and update the min/max values
+            if (map != null && image != null && shouldZoom) {
                 let minX = Infinity
                 let minY = Infinity
                 let maxX = -Infinity
                 let maxY = -Infinity
 
-                entityData.forEach((data) => {
+                radarData.playerData.forEach((pdata) => {
                     let mapCords = null
 
-                    if (data.Bomb !== undefined) {
-                        mapCords = mapCoordinates(data.Bomb.pos)
-                    } else {
-                        mapCords = mapCoordinates(data.Player.pos)
-                    }
+                    mapCords = mapCoordinates(pdata.pos)
     
                     minX = Math.min(minX, mapCords.x);
                     minY = Math.min(minY, mapCords.y);
                     maxX = Math.max(maxX, mapCords.x);
                     maxY = Math.max(maxY, mapCords.y);
                 });
+
+                if (radarData.bombData.planted || radarData.bombData.dropped) {
+                    //console.log("here");
+
+                    let mapCords = null;
+                    mapCords = mapCoordinates(radarData.bombData.pos)
+                        
+                    minX = Math.min(minX, mapCords.x);
+                    minY = Math.min(minY, mapCords.y);
+                    maxX = Math.max(maxX, mapCords.x);
+                    maxY = Math.max(maxY, mapCords.y);
+                }
 
 
                 boundingRect = makeBoundingRect(minX-safetyBound, minY-safetyBound, maxX+safetyBound, maxY+safetyBound, image.width/image.height)
@@ -149,82 +158,13 @@ function render() {
 
             drawImage()
 
-            if (entityData != null) {
-                entityData.forEach((data) => {
-                    if (data.Bomb !== undefined) {
-                        drawBomb(data.Bomb.pos, data.Bomb.isPlanted)
-                    } else {
-                        let fillStyle = localColor
-
-                        switch (data.Player.playerType) {
-                            case "Team":
-                                fillStyle = teamColor
-                                break;
-
-                            case "Enemy":
-                                fillStyle = enemyColor
-                                break;
-                        }
-
-                        drawEntity(
-                            data.Player.pos,
-                            fillStyle, 
-                            data.Player.isDormant,
-                            data.Player.hasBomb,
-                            data.Player.yaw,
-                            data.Player.hasAwp,
-                            data.Player.playerType,
-                            data.Player.isScoped
-                        )
-                    }
-                });
-            }
-
             if (radarData != null) {
-                if (radarData.bombPlanted && !radarData.bombExploded && radarData.bombDefuseTimeleft >= 0) {
+                radarData.playerData.forEach((pdata) => {
+                    drawEntity(pdata)
+                });
 
-                    let maxWidth = 1024-128-128;
-                    let timeleft = radarData.bombDefuseTimeleft;
-                    //let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
-    
-                    // Base bar
-                    ctx.fillStyle = "black"
-                    ctx.fillRect(128, 16, maxWidth, 16)
-                    
-                    // Bomb timer
-                    if (radarData.bombBeingDefused) {
-                        if (radarData.bombCanDefuse) {
-                            ctx.fillStyle = teamColor
-                        } else {
-                            ctx.fillStyle = enemyColor
-                        }
-                    } else {
-                        ctx.fillStyle = bombColor
-                    }
-
-                    ctx.fillRect(130, 18, (maxWidth-2) * (timeleft / 40), 12)
-
-                    ctx.font = "24px Arial";
-                    ctx.textAlign = "center"
-                    ctx.textBaseline = "middle"
-                    ctx.fillStyle = textColor
-                    ctx.fillText(`${timeleft.toFixed(1)}s`, 1024/2, 28+24); 
-                    
-                    // Defuse time lines
-                    ctx.strokeStyle = "black"
-                    ctx.lineWidth = 2
-
-                    // Kit defuse
-                    ctx.beginPath()
-                    ctx.moveTo(128 + (maxWidth * (5 / 40)), 16)
-                    ctx.lineTo(128 + (maxWidth * (5 / 40)), 32)
-                    ctx.stroke()
-
-                    // Normal defuse
-                    ctx.beginPath()
-                    ctx.moveTo(130 + (maxWidth-2) * (10 / 40), 16)
-                    ctx.lineTo(130 + (maxWidth-2) * (10 / 40), 32)
-                    ctx.stroke()
+                if (radarData.bombData.planted || radarData.bombData.dropped) {
+                    drawBomb(radarData.bombData)
                 }
             }
 
@@ -249,8 +189,8 @@ function render() {
             ctx.fillStyle = textColor
             ctx.lineWidth = 2;
             ctx.strokeStyle = "black"
-            ctx.strokeText(`${freq} Hz`, 2, 18)
-            ctx.fillText(`${freq} Hz`, 2, 18)
+            ctx.strokeText(`${radarData.freq} Hz`, 2, 18)
+            ctx.fillText(`${radarData.freq} Hz`, 2, 18)
         }
     }
 
@@ -275,15 +215,15 @@ function drawImage() {
     }
 }
 
-function drawBomb(pos, planted) {
+function drawBomb(bdata) {
     if (map == null)
         return
 
     if (zoomSet) {
-        pos = boundingCoordinates(mapCoordinates(pos), boundingRect)
+        pos = boundingCoordinates(mapCoordinates(bdata.pos), boundingRect)
         size = boundingScale(5, boundingRect);
     } else {
-        pos = mapCoordinates(pos)
+        pos = mapCoordinates(bdata.pos)
         size = 5
     }
 
@@ -293,123 +233,162 @@ function drawBomb(pos, planted) {
     ctx.fill();
     ctx.closePath();
 
-    if (planted && ((new Date().getTime() / 1000) % 1) > 0.5) {
-        ctx.strokeStyle = enemyColor
-        ctx.lineWidth = 1;
-        ctx.stroke()
+    if (bdata.planted) {
+        if (((new Date().getTime() / 1000) % 1) > 0.5) {
+            ctx.strokeStyle = enemyColor
+            ctx.lineWidth = 1;
+            ctx.stroke()
+        }
+
+        if (!bdata.exploded && !bdata.defused && bdata.timeleft > 0) {
+            let maxWidth = 1024-128-128;
+
+            // Base bar
+            ctx.fillStyle = "black"
+            ctx.fillRect(128, 16, maxWidth, 16)
+            
+            // Bomb timer
+            if (bdata.beingDefused) {
+                if (bdata.canDefuse) {
+                    ctx.fillStyle = teamColor
+                } else {
+                    ctx.fillStyle = enemyColor
+                }
+            } else {
+                ctx.fillStyle = bombColor
+            }
+
+            ctx.fillRect(130, 18, (maxWidth-2) * (bdata.timeleft / 40), 12)
+
+            ctx.font = "24px Arial";
+            ctx.textAlign = "center"
+            ctx.textBaseline = "middle"
+            ctx.fillStyle = textColor
+            ctx.fillText(`${bdata.timeleft.toFixed(1)}s`, 1024/2, 28+24); 
+            
+            // Defuse time lines
+            ctx.strokeStyle = "black"
+            ctx.lineWidth = 3
+
+            // Kit defuse
+            ctx.beginPath()
+            ctx.moveTo(128 + (maxWidth * (5 / 40)), 16)
+            ctx.lineTo(128 + (maxWidth * (5 / 40)), 32)
+            ctx.stroke()
+
+            // Normal defuse
+            ctx.beginPath()
+            ctx.moveTo(130 + (maxWidth-2) * (10 / 40), 16)
+            ctx.lineTo(130 + (maxWidth-2) * (10 / 40), 32)
+            ctx.stroke()
+
+            if (bdata.beingDefused && bdata.canDefuse) {
+                // Current defuse end line
+                ctx.strokeStyle = localColor
+                ctx.beginPath()
+                ctx.moveTo(130 + (maxWidth-2) * (bdata.defuseEnd / 40), 16)
+                ctx.lineTo(130 + (maxWidth-2) * (bdata.defuseEnd / 40), 32)
+                ctx.stroke()
+            }
+        }
     }
 }
 
-function drawEntity(pos, fillStyle, dormant, hasBomb, yaw, hasAwp, playerType, isScoped) {
+function drawEntity(pdata) {
     if (map == null)
         return
 
     if (zoomSet) {
-        pos = boundingCoordinates(mapCoordinates(pos), boundingRect)
+        pos = boundingCoordinates(mapCoordinates(pdata.pos), boundingRect)
         circleRadius = boundingScale(7, boundingRect);
         distance = circleRadius + boundingScale(2, boundingRect);
         radius = distance + boundingScale(2, boundingRect)
         arrowWidth = 35
     } else {
-        pos = mapCoordinates(pos)
+        pos = mapCoordinates(pdata.pos)
         circleRadius = 7
         distance = circleRadius + 2
         radius = distance + 5;
         arrowWidth = 35;
     }
 
-    if (dormant) {
-        ctx.font = "20px Arial";
-        ctx.textAlign = "center"
-        ctx.fillStyle = fillStyle
-        ctx.fillText("?", pos.x, pos.y); 
-    } else {
-
-        if (hasAwp) {
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
-            ctx.fillStyle = "orange";
-            ctx.fill();
-            circleRadius -= 2;
-        }
-
-        // Draw circle
+    if (pdata.hasAwp) {
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
-        ctx.fillStyle = fillStyle;
+        ctx.fillStyle = "orange";
         ctx.fill();
+        circleRadius -= 2;
+    }
 
-        if (hasAwp && false) {
+    let fillStyle = localColor
 
-            let style = "yellow"
+    switch (pdata.playerType) {
+        case "Team":
+            fillStyle = teamColor
+            break;
 
-            if (playerType == "Enemy") {
-                style = "orange"
-            }
+        case "Enemy":
+            fillStyle = enemyColor
+            break;
+    }
 
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, circleRadius / 1.5, 0, 2 * Math.PI);
-            ctx.fillStyle = style;
-            ctx.fill();
-        }
+    // Draw circle
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, circleRadius, 0, 2 * Math.PI);
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+    ctx.closePath();
 
-        if (hasBomb) {
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, circleRadius / 2, 0, 2 * Math.PI);
-            ctx.fillStyle = bombColor;
-            ctx.fill();
-        }
-
-
-        ctx.closePath();
-
-        // Calculate arrowhead points
-
-
-        const arrowHeadX = pos.x + radius * Math.cos(yaw * (Math.PI / 180))
-        const arrowHeadY = pos.y - radius * Math.sin(yaw * (Math.PI / 180))
-
-        const arrowCornerX1 = pos.x + distance * Math.cos((yaw - arrowWidth) * (Math.PI / 180))
-        const arrowCornerY1 = pos.y - distance * Math.sin((yaw - arrowWidth) * (Math.PI / 180))
-
-        const arrowCornerX2 = pos.x + distance * Math.cos((yaw + arrowWidth) * (Math.PI / 180))
-        const arrowCornerY2 = pos.y - distance * Math.sin((yaw + arrowWidth) * (Math.PI / 180))
-
-
-        const cicleYaw = 90-yaw
-        const startAngle = degreesToRadians(cicleYaw-arrowWidth)-Math.PI/2
-        const endAngle = degreesToRadians(cicleYaw+arrowWidth)-Math.PI/2
-
-        // Draw arrow
-
-        /// Backside of the arrow
+    // Bomd holder circle
+    if (pdata.hasBomb) {
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, distance, startAngle, endAngle)
-
-        /// Draw from corners to arrowhead
-        ctx.lineTo(arrowCornerX1, arrowCornerY1);
-        ctx.lineTo(arrowHeadX, arrowHeadY);
-        ctx.lineTo(arrowCornerX2, arrowCornerY2);
-        ctx.closePath()
-
-        ctx.fillStyle = 'white'
+        ctx.arc(pos.x, pos.y, circleRadius / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = bombColor;
         ctx.fill();
+        ctx.closePath();
+    }
 
-        if (isScoped) {
-            const lineOfSightX = arrowHeadX + 1024 * Math.cos(yaw * (Math.PI / 180))
-            const lineOfSightY = arrowHeadY - 1024 * Math.sin(yaw * (Math.PI / 180))
-            ctx.beginPath();
-            ctx.moveTo(arrowHeadX, arrowHeadY);
-            ctx.lineTo(lineOfSightX, lineOfSightY);
+    // Calculate arrowhead points
+    const arrowHeadX = pos.x + radius * Math.cos(pdata.yaw * (Math.PI / 180))
+    const arrowHeadY = pos.y - radius * Math.sin(pdata.yaw * (Math.PI / 180))
 
-            if (playerType == "Enemy")
-                ctx.strokeStyle = enemyColor
-            else
-                ctx.strokeStyle = teamColor
+    const arrowCornerX1 = pos.x + distance * Math.cos((pdata.yaw - arrowWidth) * (Math.PI / 180))
+    const arrowCornerY1 = pos.y - distance * Math.sin((pdata.yaw - arrowWidth) * (Math.PI / 180))
 
-            ctx.strokeWidth = 1;
-            ctx.stroke();
-        }
+    const arrowCornerX2 = pos.x + distance * Math.cos((pdata.yaw + arrowWidth) * (Math.PI / 180))
+    const arrowCornerY2 = pos.y - distance * Math.sin((pdata.yaw + arrowWidth) * (Math.PI / 180))
+
+    const cicleYaw = 90-pdata.yaw
+    const startAngle = degreesToRadians(cicleYaw-arrowWidth)-Math.PI/2
+    const endAngle = degreesToRadians(cicleYaw+arrowWidth)-Math.PI/2
+
+    // Draw arrow
+    /// Backside of the arrow
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, distance, startAngle, endAngle)
+    /// Draw from corners to arrowhead
+    ctx.lineTo(arrowCornerX1, arrowCornerY1);
+    ctx.lineTo(arrowHeadX, arrowHeadY);
+    ctx.lineTo(arrowCornerX2, arrowCornerY2);
+    ctx.closePath()
+
+    ctx.fillStyle = 'white'
+    ctx.fill();
+
+    if (pdata.isScoped) {
+        const lineOfSightX = arrowHeadX + 1024 * Math.cos(pdata.yaw * (Math.PI / 180))
+        const lineOfSightY = arrowHeadY - 1024 * Math.sin(pdata.yaw * (Math.PI / 180))
+        ctx.beginPath();
+        ctx.moveTo(arrowHeadX, arrowHeadY);
+        ctx.lineTo(lineOfSightX, lineOfSightY);
+
+        if (pdata.playerType == "Enemy")
+            ctx.strokeStyle = enemyColor
+        else
+            ctx.strokeStyle = teamColor
+
+        ctx.strokeWidth = 1;
+        ctx.stroke();
     }
 }
 
@@ -459,21 +438,16 @@ function connect() {
             } else {
                 let data = JSON.parse(event.data);
                 radarData = data; 
-                freq = data.freq;
 
                 if (data.ingame == false) {
                     mapName = null
-                    entityData = null
 
                     if (loaded)
                         unloadMap()
                 } else {
                     if (!loaded) {
                         mapName = data.mapName
-                        entityData = data.entityData
                         loadMap(mapName)
-                    } else {
-                        entityData = data.entityData
                     }
                 }
 
