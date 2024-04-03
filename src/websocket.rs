@@ -60,9 +60,8 @@ pub async fn run(path: PathBuf, port: u16, data_lock: Arc<RwLock<RadarData>>) ->
         .with_state(AppState { data_lock });
 
     let address = format!("0.0.0.0:{}", port);
-
-    axum::Server::bind(&address.parse()?)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(address).await?;
+    axum::serve(listener, app.into_make_service())
         .await?;
 
     Ok(())

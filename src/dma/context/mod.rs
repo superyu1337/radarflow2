@@ -18,7 +18,7 @@ pub struct DmaCtx {
 impl DmaCtx {
     fn check_version(&mut self) -> anyhow::Result<()> {
         let game_build_number: u32 = self.process.read(self.engine_module.base + cs2dumper::offsets::engine2_dll::dwBuildNumber)?;
-        let offset_build_number = cs2dumper::offsets::game_info::buildNumber;
+        let offset_build_number = env!("CS2_BUILD_NUMBER").parse::<usize>()?;
 
         if game_build_number as usize != offset_build_number {
             return Err(anyhow::anyhow!(
