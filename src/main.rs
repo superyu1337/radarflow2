@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
 
     let radar_clone = radar_data.clone();
     let dma_handle = tokio::spawn(async move {
-        if let Err(err) = dma::run(radar_clone, cli.connector, cli.pcileech_device).await {
+        if let Err(err) = dma::run(radar_clone, cli.connector, cli.pcileech_device, cli.skip_version).await {
             log::error!("Error in dma thread: [{}]", err.to_string());
         } else {
             println!("CS2 Process exited, exiting program...")

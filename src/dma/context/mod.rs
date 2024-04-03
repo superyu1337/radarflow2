@@ -31,7 +31,7 @@ impl DmaCtx {
         Ok(())
     }
 
-    pub fn setup(connector: Connector, pcileech_device: String) -> anyhow::Result<DmaCtx> {
+    pub fn setup(connector: Connector, pcileech_device: String, skip_version: bool) -> anyhow::Result<DmaCtx> {
         let inventory = Inventory::scan();
 
         let os = { 
@@ -66,7 +66,9 @@ impl DmaCtx {
             engine_module,
         };
 
-        ctx.check_version()?;
+        if !skip_version {
+            ctx.check_version()?;
+        }
 
         Ok(ctx)
     }

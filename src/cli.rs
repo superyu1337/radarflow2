@@ -28,6 +28,10 @@ pub struct Cli {
     /// Verbosity level for logging to the console
     #[arg(value_enum, long, short,  ignore_case = true, default_value_t = Loglevel::Warn)]
     pub loglevel: Loglevel,
+
+    /// Skip the dwBuildNumber check, allows for running with *possibly* outdated offsets.
+    #[arg(long)]
+    pub skip_version: bool,
 }
 
 fn version() -> String {

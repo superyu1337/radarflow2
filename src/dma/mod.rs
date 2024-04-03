@@ -12,8 +12,8 @@ mod cs2dumper;
 
 pub use context::Connector;
 
-pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_device: String) -> anyhow::Result<()> {
-    let mut ctx = DmaCtx::setup(connector, pcileech_device)?;
+pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_device: String, skip_version: bool) -> anyhow::Result<()> {
+    let mut ctx = DmaCtx::setup(connector, pcileech_device, skip_version)?;
     let mut data = CsData::default();
     
     // For read timing
