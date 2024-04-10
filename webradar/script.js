@@ -35,7 +35,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
-//websocketAddr = "ws://localhost:8001/ws"
+websocketAddr = "ws://192.168.0.235:8000/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -185,8 +185,6 @@ function render() {
 
                     let maxWidth = 1024-128-128;
                     let timeleft = radarData.bombDefuseTimeleft;
-                    let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
-                    let defuseStamp = (timeleft - radarData.bombDefuseLength)
     
                     // Base bar
                     ctx.fillStyle = "black"
@@ -228,11 +226,11 @@ function render() {
                     ctx.stroke()
 
                     // Defuse stamp line
-                    if (canDefuse) {
+                    if (radarData.bombCanDefuse) {
                         ctx.strokeStyle = "green"
                         ctx.beginPath()
-                        ctx.moveTo(130 + (maxWidth-2) * (defuseStamp / 40), 16)
-                        ctx.lineTo(130 + (maxWidth-2) * (defuseStamp / 40), 32)
+                        ctx.moveTo(130 + (maxWidth-2) * (radarData.bombDefuseLeft / 40), 16)
+                        ctx.lineTo(130 + (maxWidth-2) * (radarData.bombDefuseLeft / 40), 32)
                         ctx.stroke()
                     }
                 }
