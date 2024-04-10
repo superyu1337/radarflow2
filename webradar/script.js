@@ -185,7 +185,8 @@ function render() {
 
                     let maxWidth = 1024-128-128;
                     let timeleft = radarData.bombDefuseTimeleft;
-                    //let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
+                    let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
+                    let defuseStamp = (timeleft - radarData.bombDefuseLength)
     
                     // Base bar
                     ctx.fillStyle = "black"
@@ -225,6 +226,15 @@ function render() {
                     ctx.moveTo(130 + (maxWidth-2) * (10 / 40), 16)
                     ctx.lineTo(130 + (maxWidth-2) * (10 / 40), 32)
                     ctx.stroke()
+
+                    // Defuse stamp line
+                    if (canDefuse) {
+                        ctx.strokeStyle = "green"
+                        ctx.beginPath()
+                        ctx.moveTo(130 + (maxWidth-2) * (defuseStamp / 40), 16)
+                        ctx.lineTo(130 + (maxWidth-2) * (defuseStamp / 40), 32)
+                        ctx.stroke()
+                    }
                 }
             }
 
