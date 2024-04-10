@@ -83,8 +83,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
 
         let bomb_defuse_end: f32 = {
             if bomb_can_defuse {
-                if let Some(defuse_stamp) = data.bomb_defuse_stamp {
-                    data.bomb_plant_timer - (data.bomb_defuse_length - defuse_stamp.elapsed().as_secs_f32())
+                if let (Some(bomb_stamp), Some(defuse_stamp)) = (data.bomb_planted_stamp, data.bomb_defuse_stamp) {
+                    let defuse_left = data.bomb_defuse_length - defuse_stamp.elapsed().as_secs_f32();
+                    (data.bomb_plant_timer - bomb_stamp.elapsed().as_secs_f32()) - defuse_left
                 } else {
                     0.0
                 }

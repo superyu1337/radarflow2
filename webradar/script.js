@@ -227,7 +227,7 @@ function render() {
 
                     // Defuse stamp line
                     if (radarData.bombCanDefuse) {
-                        console.log("radarData.bombDefuseEnd")
+                        console.log(radarData.bombDefuseEnd)
                         ctx.strokeStyle = "green"
                         ctx.beginPath()
                         ctx.moveTo(130 + (maxWidth-2) * (radarData.bombDefuseEnd / 40), 16)
