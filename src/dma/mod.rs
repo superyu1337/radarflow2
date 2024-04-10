@@ -81,10 +81,10 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             }
         };
 
-        let bomb_defuse_left: f32 = {
+        let bomb_defuse_end: f32 = {
             if bomb_can_defuse {
-                if let Some(defuse_stamp) = data.bomb_defuse_stamp {
-                    data.bomb_defuse_length - defuse_stamp.elapsed().as_secs_f32()
+                if let Some(bomb_stamp) = data.bomb_defuse_stamp {
+                    (data.bomb_plant_timer - bomb_stamp.elapsed().as_secs_f32()) - data.bomb_defuse_length
                 } else {
                     0.0
                 }
@@ -217,7 +217,7 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                 data.bomb_exploded,
                 data.bomb_being_defused,
                 data.bomb_defuse_length,
-                bomb_defuse_left
+                bomb_defuse_end
             );
         } else {
             let mut radar = radar_data.write().await;

@@ -68,8 +68,8 @@ pub struct RadarData {
     #[serde(rename = "bombDefuseTimeleft")]
     bomb_defuse_timeleft: f32,
 
-    #[serde(rename = "bombDefuseLeft")]
-    bomb_defuse_left: f32,
+    #[serde(rename = "bombDefuseEnd")]
+    bomb_defuse_end: f32,
 
     #[serde(rename = "mapName")]
     map_name: String,
@@ -82,8 +82,8 @@ pub struct RadarData {
 }
 
 impl RadarData {
-    pub fn new(ingame: bool, map_name: String, player_data: Vec<EntityData>, freq: usize, bomb_planted: bool, bomb_cannot_defuse: bool, bomb_defuse_timeleft: f32, bomb_exploded: bool, bomb_being_defused: bool, bomb_defuse_length: f32, bomb_defuse_left: f32) -> RadarData {
-        RadarData { ingame, map_name, player_data, freq, bomb_planted, bomb_can_defuse: bomb_cannot_defuse, bomb_defuse_timeleft, bomb_exploded, bomb_being_defused, bomb_defuse_length, bomb_defuse_left }
+    pub fn new(ingame: bool, map_name: String, player_data: Vec<EntityData>, freq: usize, bomb_planted: bool, bomb_cannot_defuse: bool, bomb_defuse_timeleft: f32, bomb_exploded: bool, bomb_being_defused: bool, bomb_defuse_length: f32, bomb_defuse_end: f32) -> RadarData {
+        RadarData { ingame, map_name, player_data, freq, bomb_planted, bomb_can_defuse: bomb_cannot_defuse, bomb_defuse_timeleft, bomb_exploded, bomb_being_defused, bomb_defuse_length, bomb_defuse_end }
     }
 
     /// Returns empty RadarData, it's also the same data that gets sent to clients when not ingame
@@ -99,7 +99,7 @@ impl RadarData {
             bomb_exploded: false,
             bomb_being_defused: false,
             bomb_defuse_length: 0.0,
-            bomb_defuse_left: 0.0
+            bomb_defuse_end: 0.0
         }
     }
 }
