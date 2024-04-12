@@ -10,8 +10,14 @@
     <div id="canvasContainer">
         <div id="settingsHolder">
             <div class="settings">
-                <button onclick="toggleZoom()">Toggle Zoom</button>
-                <button onclick="toggleStats()">Toggle Stats</button>
+                <div>
+                    <input type="checkbox" onclick="toggleZoom()" id="zoomCheck" name="zoom"/>
+                    <label for="zoomCheck">Zoom</label>
+                </div>
+                <div>
+                    <input type="checkbox" onclick="toggleStats()" id="statsCheck" name="stats"/>
+                    <label for="statsCheck">Stats</label>
+                </div>
             </div>
         </div>
         <canvas id="canvas"></canvas>

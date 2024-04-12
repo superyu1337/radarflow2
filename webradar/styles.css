@@ -9,11 +9,10 @@ body {
 }
 
 #canvasContainer {
-    aspect-ratio: 1 / 1;
-    height: 100vh;
+    width: 100vmin;
+    height: 100vmin;
     position: relative;
     overflow: hidden;
-    transition: width 0.5s ease; /* Smooth transition */
     float: left;
     object-fit: contain;
 }
@@ -37,6 +36,11 @@ canvas {
 }
 
 .settings {
+    display: flex;
+    flex-direction: column;
+
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
     visibility: visible;
     opacity: 0;
     padding: 10px;

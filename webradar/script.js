@@ -7,7 +7,7 @@ const textColor = "#d1d1d1"
 
 // Settings
 shouldZoom = true
-drawStats = true
+drawStats = false
 
 // Common
 canvas = null
@@ -35,7 +35,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
-//websocketAddr = "ws://192.168.0.235:8000/ws"
+websocketAddr = "ws://192.168.0.235:8000/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -520,6 +520,9 @@ function connect() {
 }
 
 addEventListener("DOMContentLoaded", (e) => {
+    document.getElementById("zoomCheck").checked = true;
+
+
     canvas = document.getElementById('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
