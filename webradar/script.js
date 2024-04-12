@@ -7,7 +7,7 @@ const textColor = "#d1d1d1"
 
 // Settings
 shouldZoom = true
-drawStats = true
+drawStats = false
 
 // Common
 canvas = null
@@ -35,7 +35,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
-//websocketAddr = "ws://localhost:8001/ws"
+websocketAddr = "ws://192.168.0.235:8000/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -185,7 +185,6 @@ function render() {
 
                     let maxWidth = 1024-128-128;
                     let timeleft = radarData.bombDefuseTimeleft;
-                    //let canDefuse = (timeleft - radarData.bombDefuseLength) > 0
     
                     // Base bar
                     ctx.fillStyle = "black"
@@ -225,6 +224,16 @@ function render() {
                     ctx.moveTo(130 + (maxWidth-2) * (10 / 40), 16)
                     ctx.lineTo(130 + (maxWidth-2) * (10 / 40), 32)
                     ctx.stroke()
+
+                    // Defuse stamp line
+                    if (radarData.bombCanDefuse) {
+                        console.log(radarData.bombDefuseEnd)
+                        ctx.strokeStyle = "green"
+                        ctx.beginPath()
+                        ctx.moveTo(130 + (maxWidth-2) * (radarData.bombDefuseEnd / 40), 16)
+                        ctx.lineTo(130 + (maxWidth-2) * (radarData.bombDefuseEnd / 40), 32)
+                        ctx.stroke()
+                    }
                 }
             }
 
@@ -511,6 +520,9 @@ function connect() {
 }
 
 addEventListener("DOMContentLoaded", (e) => {
+    document.getElementById("zoomCheck").checked = true;
+
+
     canvas = document.getElementById('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
