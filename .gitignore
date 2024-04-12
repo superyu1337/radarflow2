@@ -1,7 +1,4 @@
 /target
-/src/dma/cs2dumper/offsets.rs
-/src/dma/cs2dumper/client.rs
-/src/dma/cs2dumper/engine2.rs
 /src/dma/cs2dumper/offsets_mod.rs
 /src/dma/cs2dumper/client_mod.rs
 /src/dma/cs2dumper/engine2_mod.rs
