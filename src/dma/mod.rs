@@ -14,7 +14,7 @@ pub use context::Connector;
 
 pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_device: String, skip_version: bool) -> anyhow::Result<()> {
     let mut ctx = DmaCtx::setup(connector, pcileech_device, skip_version)?;
-    let mut data = CsData::default();
+    let mut data = CsData { recheck_bomb_holder: true, ..Default::default() };
     
     // For read timing
     let mut last_bomb_dropped = false;
@@ -50,10 +50,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             data.update_bomb(&mut ctx);
         }
 
-        if (!data.bomb_dropped && last_bomb_dropped) || !data.bomb_planted {
+        if !data.bomb_dropped && last_bomb_dropped && !data.bomb_planted {
             data.recheck_bomb_holder = true;
         }
-
 
         let bomb_defuse_timeleft: f32 = {
             if data.bomb_planted && !data.bomb_exploded && !data.bomb_defused {
@@ -125,7 +124,7 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
 
             if local_data.health > 0 {
                 let has_bomb = {
-                    if data.bomb_planted {
+                    if data.bomb_planted || data.bomb_dropped {
                         false
                     } else if data.recheck_bomb_holder {
                         if local_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
