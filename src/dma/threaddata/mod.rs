@@ -39,37 +39,59 @@ pub struct CsData {
 
 impl CsData {
     pub fn update_bomb(&mut self, ctx: &mut DmaCtx) {
-        // If the bomb is dropped, do a reverse entity list loop with early exit when we found the bomb. ( Now with BATCHING!!! :O )
         if self.bomb_dropped {
+            // If the bomb is dropped, do a reverse entity list loop with early exit when we found the bomb.
 
-            // We search in chunks of 128 indexes
-            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(128) {
-                let mut data_vec: Vec<(u64, i32)> = chunk
-                    .map(|idx| (0u64, idx))
+            // We search in chunks of 512 indexes
+            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(512) {
+                // data vec: (address, index, entity_identity_ptr, designer_name_ptr, designer_name_buff)
+                let mut data_vec: Vec<(u64, i32, u64, u64, [u8; 2])> = chunk
+                    .map(|idx| (0u64, idx, 0u64, 0u64, [0u8; 2]))
                     .collect();
 
-                {
-                    let mut batcher = ctx.process.batcher();
-                    let ent_list: Address = self.entity_list.into();
+                // Get the entity handle
+                let mut batcher = ctx.process.batcher();
+                data_vec.iter_mut().for_each(|(handle, idx, _, _, _)| {
+                    let base: Address = (self.entity_list).into();
+                    batcher.read_into(base + 8 * (*idx >> 9) + 16, handle);
+                });
+                drop(batcher);
 
-                    data_vec.iter_mut().for_each(|(data, idx)| {
-                        batcher.read_into(ent_list + 8 * (*idx >> 9) + 16, data);
-                    });
-                }
+                // Get the actual entity address
+                let mut batcher = ctx.process.batcher();
+                data_vec.iter_mut().for_each(|(ptr, index, _, _, _)| {
+                    let base: Address = (*ptr).into();
+                    batcher.read_into(base + 120 * (*index & 0x1FF), ptr);
+                });
+                drop(batcher);
 
-                {
-                    let mut batcher = ctx.process.batcher();
-        
-                    data_vec.iter_mut().for_each(|(ptr, index)| {
-                        let handle: Address = (*ptr).into();
-                        batcher.read_into(handle + 120 * (*index & 0x1FF), ptr);
-                    });
-                }
+                // Get the entity identity address
+                let mut batcher = ctx.process.batcher();
+                data_vec.iter_mut().for_each(|(ptr, _, ent_ident_ptr, _, _)| {
+                    let base: Address = (*ptr).into();
+                    batcher.read_into(base + cs2dumper::client::CEntityInstance::m_pEntity, ent_ident_ptr);
+                });
+                drop(batcher);
 
-                // You can actually optimize this EVEN more
-                let bomb = data_vec.into_iter().find(|(ptr, _)| {
-                    // By doing this with a batcher too...
-                    ctx.is_dropped_c4((*ptr).into()).unwrap_or(false)
+                // Get the designer name address
+                let mut batcher = ctx.process.batcher();
+                data_vec.iter_mut().for_each(|(_, _, ent_ident_ptr, designer_name_ptr, _)| {
+                    let base: Address = (*ent_ident_ptr).into();
+                    batcher.read_into(base + cs2dumper::client::CEntityIdentity::m_designerName, designer_name_ptr);
+                });
+                drop(batcher);
+
+                // Read out 2 bytes of the designer name
+                let mut batcher = ctx.process.batcher();
+                data_vec.iter_mut().for_each(|(_, _, _, designer_name_ptr, designer_name_buff)| {
+                    let base: Address = (*designer_name_ptr).into();
+                    batcher.read_into(base + 7, designer_name_buff);
+                });
+                drop(batcher);
+
+                // Actually check for the right designer name
+                let bomb = data_vec.into_iter().find(|(_, _, _, _, designer_name_buff)| {
+                    designer_name_buff == "c4".as_bytes()
                 });
 
                 if let Some(bomb) = bomb {
@@ -77,7 +99,6 @@ impl CsData {
                     break;
                 }
             }
-
         } else if self.bomb_planted {
             let bomb = ctx.get_plantedc4()
                 .expect("Failed to get planted bomb");
