@@ -35,7 +35,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
-websocketAddr = "ws://192.168.0.235:8000/ws"
+//websocketAddr = "ws://192.168.0.235:8000/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
