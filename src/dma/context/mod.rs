@@ -134,16 +134,6 @@ impl DmaCtx {
         Ok(ptr2)
     }
 
-    /// Professionally engineered function to quickly check if the entity has class name "weapon_c4"
-    pub fn is_dropped_c4(&mut self, entity_ptr: Address) -> anyhow::Result<bool> {
-        let entity_identity_ptr = self.process.read_addr64(entity_ptr + cs2dumper::client::CEntityInstance::m_pEntity)?;
-        let class_name_ptr = self.process.read_addr64(entity_identity_ptr + cs2dumper::client::CEntityIdentity::m_designerName)?;
-
-        let data = self.process.read_raw(class_name_ptr + 7, 2)?;
-        let is_c4 = data == "c4".as_bytes();
-        Ok(is_c4)
-    }
-
     /// Professionally engineered function to quickly check if the entity has class name "cs_player_controller"
     pub fn is_cs_player_controller(&mut self, entity_ptr: Address) -> anyhow::Result<bool> {
         let entity_identity_ptr = self.process.read_addr64(entity_ptr + cs2dumper::client::CEntityInstance::m_pEntity)?;
