@@ -42,8 +42,8 @@ impl CsData {
         if self.bomb_dropped {
             // If the bomb is dropped, do a reverse entity list loop with early exit when we found the bomb.
 
-            // We search in chunks of 512 indexes
-            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(512) {
+            // We search in chunks of 64 indexes
+            for chunk in &(0..=self.highest_index).rev().into_iter().chunks(64) {
                 // data vec: (address, index, entity_identity_ptr, designer_name_ptr, designer_name_buff)
                 let mut data_vec: Vec<(u64, i32, u64, u64, [u8; 2])> = chunk
                     .map(|idx| (0u64, idx, 0u64, 0u64, [0u8; 2]))
