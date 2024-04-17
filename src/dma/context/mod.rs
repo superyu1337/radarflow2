@@ -46,11 +46,13 @@ impl DmaCtx {
                     .args(connector_args)
                     .os("win32")
                     .build()?
-            } else {
+            } else if connector != Connector::Native {
                 inventory.builder()
-                .connector(&connector.to_string())
-                .os("win32")
-                .build()?
+                    .connector(&connector.to_string())
+                    .os("win32")
+                    .build()?
+            } else {
+                memflow_native::create_os(&Default::default(), Default::default())?
             }
         };
 
@@ -234,43 +236,6 @@ impl DmaCtx {
             None => None,
         }
     }
-
-    // Todo: Optimize this function: find another way to do this
-    pub fn has_c4(&mut self, pawn: Address, entity_list: Address) -> anyhow::Result<bool> {
-        let mut has_c4 = false;
-        let wep_services = self.process.read_addr64(pawn + cs2dumper::client::C_BasePlayerPawn::m_pWeaponServices)?;
-        let wep_count: i32  = self.process.read(wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons)?;
-        let wep_base = self.process.read_addr64(wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons + 0x8)?;
-
-        for wep_idx in 0..wep_count {
-            let handle: i32 = self.process.read(wep_base + wep_idx * 0x4)?;
-            if handle == -1 {
-                continue;
-            }
-
-            let list_entry = self.process.read_addr64(entity_list + 0x8 * ((handle & 0x7FFF) >> 9) + 16)?;
-            if let Some(wep_ptr) = {
-                if list_entry.is_null() || !list_entry.is_valid() {
-                    None
-                } else {
-                    let ptr = self.process.read_addr64(list_entry + 120 * (handle & 0x1FF))?;
-                    Some(ptr)
-                }
-            }
-            {
-                let wep_data = self.process.read_addr64(wep_ptr + cs2dumper::client::C_BaseEntity::m_nSubclassID + 0x8)?;
-                let id: i32 = self.process.read(wep_data + cs2dumper::client::CCSWeaponBaseVData::m_WeaponType)?;
-
-                if id == 7 {
-                    has_c4 = true;
-                    break;
-                }
-            }
-        }
-
-        Ok(has_c4)
-    }
-
 }
 
 

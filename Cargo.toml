@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 # memory
 memflow = "0.2.1"
+memflow-native = { git = "https://github.com/memflow/memflow-native" }
 dataview = "1.0.1"
 
 # logging

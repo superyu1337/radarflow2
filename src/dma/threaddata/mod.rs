@@ -23,6 +23,12 @@ pub struct CsData {
     pub local_pawn: u64,
     pub is_dead: bool,
     pub tick_count: i32,
+    pub freeze_period: bool,
+    pub round_start_count: u8,
+    pub highest_index: i32,
+    pub map: String,
+
+    // Bomb
     pub bomb_dropped: bool,
     pub bomb_planted: bool,
     pub bomb_planted_stamp: Option<Instant>,
@@ -32,8 +38,6 @@ pub struct CsData {
     pub bomb_defuse_length: f32,
     pub bomb_exploded: bool,
     pub bomb_defused: bool,
-    pub highest_index: i32,
-    pub map: String
 }
 
 
@@ -161,7 +165,7 @@ impl CsData {
         let mut bomb_being_defused = 0u8;
         let mut bomb_exploded = 0u8;
         let mut bomb_defused = 0u8;
-
+        let mut freeze_period = 0u8;
         {
             // Globals
             let tick_count_addr = (self.globals + 0x40).into();
@@ -170,6 +174,8 @@ impl CsData {
             // Gamerules
             let bomb_dropped_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_bBombDropped as u64).into();
             let bomb_planted_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_bBombPlanted as u64).into();
+            let total_rounds_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_bFreezePeriod as u64).into();
+            let round_start_count_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_nRoundStartCount as u64).into();
 
             // Game Entity System
             let highest_index_addr = (self.game_ent_sys + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex as u64).into();
@@ -187,6 +193,8 @@ impl CsData {
             batcher.read_into(tick_count_addr, &mut self.tick_count);
             batcher.read_into(bomb_dropped_addr, &mut bomb_dropped);
             batcher.read_into(bomb_planted_addr, &mut bomb_planted);
+            batcher.read_into(total_rounds_addr, &mut freeze_period);
+            batcher.read_into(round_start_count_addr, &mut self.round_start_count);
             batcher.read_into(highest_index_addr, &mut self.highest_index);
             batcher.read_into(map_addr, &mut map_ptr);
         }
@@ -237,6 +245,7 @@ impl CsData {
         self.bomb_exploded = bomb_exploded != 0;
         self.bomb_being_defused = bomb_being_defused != 0;
         self.bomb_defused = bomb_defused != 0;
+        self.freeze_period = freeze_period != 0;
     }
 
     pub fn update_pointers(&mut self, ctx: &mut DmaCtx) {
