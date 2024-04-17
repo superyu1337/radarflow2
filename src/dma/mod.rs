@@ -1,8 +1,8 @@
 use std::{thread, time::{Duration, Instant}};
 
-use memflow::{os::Process, types::Address, mem::MemoryView};
+use memflow::{os::Process, mem::MemoryView};
 
-use crate::{enums::{TeamID, PlayerType}, comms::{EntityData, PlayerData, RadarData, ArcRwlockRadarData, BombData}};
+use crate::{enums::PlayerType, comms::{EntityData, PlayerData, RadarData, ArcRwlockRadarData, BombData}};
 
 use self::{context::DmaCtx, threaddata::CsData};
 
@@ -52,6 +52,12 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
 
         if !data.bomb_dropped && last_bomb_dropped && !data.bomb_planted {
             data.recheck_bomb_holder = true;
+        }
+
+        if data.recheck_bomb_holder {
+            let pawns = data.players.clone().into_iter().map(|(_, pawn)| pawn).collect();
+            data.bomb_holder = ctx.get_c4_holder(pawns, data.entity_list.into());
+            data.recheck_bomb_holder = false;
         }
 
         let bomb_defuse_timeleft: f32 = {
@@ -123,23 +129,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             ).unwrap();
 
             if local_data.health > 0 {
-                let has_bomb = {
-                    if data.bomb_planted || data.bomb_dropped {
-                        false
-                    } else if data.recheck_bomb_holder {
-                        if local_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
-                            let is_holder = ctx.has_c4(
-                                data.local_pawn.into(), data.entity_list.into()
-                            ).unwrap_or(false);
-
-                            if is_holder {
-                                data.bomb_holder = data.local.into();
-                                data.recheck_bomb_holder = false;
-                            }
-
-                            is_holder
-                        } else { false }
-                    } else { Address::from(data.local) == data.bomb_holder }
+                let has_bomb = match data.bomb_holder {
+                    Some(bh) => data.local_pawn == bh.to_umem(),
+                    None => false,
                 };
 
                 entity_data.push(
@@ -164,21 +156,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                     continue;
                 }
 
-                let has_bomb = {
-                    if data.bomb_planted {
-                        false
-                    } else if data.recheck_bomb_holder {
-                        if player_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
-                            let is_holder = ctx.has_c4(*pawn, data.entity_list.into()).unwrap_or(false);
-
-                            if is_holder {
-                                data.bomb_holder = *controller;
-                                data.recheck_bomb_holder = false;
-                            }
-
-                            is_holder
-                        } else { false }
-                    } else { *controller == data.bomb_holder }
+                let has_bomb = match data.bomb_holder {
+                    Some(bh) => *pawn == bh,
+                    None => false,
                 };
 
                 let player_type = {

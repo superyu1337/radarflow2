@@ -9,7 +9,7 @@ pub struct CsData {
     // Entities
     pub players: Vec<(Address, Address)>,
     pub bomb: Address,
-    pub bomb_holder: Address,
+    pub bomb_holder: Option<Address>,
     pub recheck_bomb_holder: bool,
 
     // Pointers
