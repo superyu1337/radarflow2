@@ -7,7 +7,7 @@ use num_traits::FromPrimitive;
 
 use crate::{structs::Vec3, enums::TeamID};
 
-use super::cs2dumper;
+use super::{cs2dumper, threaddata::CsData};
 
 pub struct DmaCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
@@ -146,7 +146,12 @@ impl DmaCtx {
         Ok(is_controller)
     }
 
-    pub fn get_c4_holder(&mut self, pawns: Vec<Address>, entity_list: Address) -> Option<Address> {
+    pub fn get_c4_holder(&mut self, pawns: Vec<Address>, entity_list: Address, csdata: &CsData) -> Option<Address> {
+
+        if csdata.bomb_dropped || csdata.bomb_planted {
+            return None;
+        }
+
         // (pawn, wep_services, wep_count, wep_base)
         let mut data_vec: Vec<(Address, u64, i32, u64)> = pawns
             .into_iter()

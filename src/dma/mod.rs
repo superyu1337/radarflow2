@@ -79,7 +79,7 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
 
             pawns.push(data.local_pawn.into());
         
-            data.bomb_holder = ctx.get_c4_holder(pawns, data.entity_list.into());
+            data.bomb_holder = ctx.get_c4_holder(pawns, data.entity_list.into(), &data);
             data.recheck_bomb_holder = false;
         }
 
