@@ -52,7 +52,7 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             data.update_bomb(&mut ctx);
         }
 
-        if data.bomb_dropped != last_bomb_dropped && !data.bomb_planted {
+        if data.bomb_dropped != last_bomb_dropped && data.bomb_planted != last_bomb_planted {
             log::debug!("Bomb holder recheck due to bomb drop status");
             data.recheck_bomb_holder = true;
         }
