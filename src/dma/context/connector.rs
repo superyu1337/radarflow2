@@ -3,7 +3,8 @@ pub enum Connector {
     #[default]
     Qemu,
     Kvm,
-    Pcileech
+    Pcileech,
+    Native
 }
 
 impl ToString for Connector {
@@ -12,6 +13,7 @@ impl ToString for Connector {
             Connector::Qemu => String::from("qemu"),
             Connector::Kvm => String::from("kvm"),
             Connector::Pcileech => String::from("pcileech"),
+            Connector::Native => String::from("native"),
         }
     }
 }
