@@ -208,8 +208,6 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                 );
             }
 
-            println!("{}", local_data.crosshair_id);
-
             let mut radar = radar_data.write().await;
             *radar = RadarData::new(
                 true,
