@@ -220,7 +220,8 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                 data.bomb_exploded,
                 data.bomb_being_defused,
                 data.bomb_defuse_length,
-                bomb_defuse_end
+                bomb_defuse_end,
+                local_data.crosshair_id != 0
             );
         } else {
             let mut radar = radar_data.write().await;

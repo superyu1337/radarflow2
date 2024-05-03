@@ -97,6 +97,7 @@ impl DmaCtx {
         let mut team = 0i32;
         let mut clipping_weapon = 0u64;
         let mut is_scoped = 0u8;
+        let mut crosshair_id = 0u8;
 
         {
             let mut batcher = MemoryViewBatcher::new(&mut self.process);
@@ -105,7 +106,8 @@ impl DmaCtx {
             batcher.read_into(pawn + cs2dumper::client::C_BaseEntity::m_iHealth, &mut health);
             batcher.read_into(controller + cs2dumper::client::C_BaseEntity::m_iTeamNum, &mut team);
             batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_pClippingWeapon, &mut clipping_weapon);
-            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawn::m_bIsScoped, &mut is_scoped);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_bIsScoped, &mut is_scoped);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_iIDEntIndex, &mut crosshair_id);
         }
     
         let team = TeamID::from_i32(team);
@@ -126,7 +128,8 @@ impl DmaCtx {
             team,
             health,
             has_awp,
-            is_scoped: is_scoped != 0
+            is_scoped: is_scoped != 0,
+            crosshair_id
         })
     }
 
@@ -252,4 +255,5 @@ pub struct BatchedPlayerData {
     pub health: u32,
     pub has_awp: bool,
     pub is_scoped: bool,
+    pub crosshair_id: u8,
 }
