@@ -1,7 +1,10 @@
 // Colors
 const localColor = "#109856"
+const localLowerColor = "#064024"
 const teamColor = "#68a3e5"
+const teamLowerColor = "#2c4969"
 const enemyColor = "#ec040b"
+const enemyLowerColor = "#4f0002"
 const bombColor = "#eda338"
 const textColor = "#d1d1d1"
 
@@ -35,7 +38,7 @@ if (location.protocol == 'https:') {
 } else {
     websocketAddr = `ws://${window.location.host}/ws`
 }
-//websocketAddr = "ws://192.168.0.235:8000/ws"
+websocketAddr = "ws://192.168.0.235:8000/ws"
 
 // Util functions
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -154,16 +157,30 @@ function render() {
                     if (data.Bomb !== undefined) {
                         drawBomb(data.Bomb.pos, data.Bomb.isPlanted)
                     } else {
-                        let fillStyle = localColor
+                        let fillStyle = localLowerColor
 
-                        switch (data.Player.playerType) {
-                            case "Team":
-                                fillStyle = teamColor
-                                break;
+                        if (map && map.altitude_split && data.Player.pos.z < map.altitude_split) {
 
-                            case "Enemy":
-                                fillStyle = enemyColor
-                                break;
+                            switch (data.Player.playerType) {
+                                case "Team":
+                                    fillStyle = teamLowerColor
+                                    break;
+    
+                                case "Enemy":
+                                    fillStyle = enemyLowerColor
+                                    break;
+                            }
+                        } else {
+                            fillStyle = localColor
+                            switch (data.Player.playerType) {
+                                case "Team":
+                                    fillStyle = teamColor
+                                    break;
+    
+                                case "Enemy":
+                                    fillStyle = enemyColor
+                                    break;
+                            }
                         }
 
                         drawEntity(
