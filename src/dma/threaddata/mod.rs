@@ -169,7 +169,7 @@ impl CsData {
         {
             // Globals
             let tick_count_addr = (self.globals + 0x40).into();
-            let map_addr = (self.globals + 0x188).into();
+            let map_addr = (self.globals + 0x1b8).into();
 
             // Gamerules
             let bomb_dropped_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_bBombDropped as u64).into();
@@ -178,7 +178,7 @@ impl CsData {
             let round_start_count_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_nRoundStartCount as u64).into();
 
             // Game Entity System
-            let highest_index_addr = (self.game_ent_sys + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex as u64).into();
+            let highest_index_addr = (self.game_ent_sys + cs2dumper::offsets::client_dll::dwGameEntitySystem_highestEntityIndex as u64).into();
 
             let mut batcher = ctx.process.batcher();
             batcher.read_into(

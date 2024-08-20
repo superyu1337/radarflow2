@@ -36,7 +36,7 @@ fn build_number() -> Result<(), Box<dyn Error>> {
 fn main() -> Result<(), Box<dyn Error>> {
 
     download(
-        "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client.dll.rs",
+        "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/client_dll.rs",
         "./src/dma/cs2dumper/client_mod.rs"
     ).expect("Failed to download build file \"client.dll.rs\"");
 
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ).expect("Failed to download build file \"offsets.rs\"");
 
     download(
-        "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/engine2.dll.rs",
+        "https://raw.githubusercontent.com/a2x/cs2-dumper/main/output/engine2_dll.rs",
         "./src/dma/cs2dumper/engine2_mod.rs"
     ).expect("Failed to download build file \"engine2.dll.rs\"");
 
