@@ -7,7 +7,7 @@ use num_traits::FromPrimitive;
 
 use crate::{structs::Vec3, enums::TeamID};
 
-use super::cs2dumper;
+use super::{cs2dumper, threaddata::CsData};
 
 pub struct DmaCtx {
     pub process: IntoProcessInstanceArcBox<'static>,
@@ -46,11 +46,13 @@ impl DmaCtx {
                     .args(connector_args)
                     .os("win32")
                     .build()?
-            } else {
+            } else if connector != Connector::Native {
                 inventory.builder()
-                .connector(&connector.to_string())
-                .os("win32")
-                .build()?
+                    .connector(&connector.to_string())
+                    .os("win32")
+                    .build()?
+            } else {
+                memflow_native::create_os(&Default::default(), Default::default())?
             }
         };
 
@@ -103,7 +105,7 @@ impl DmaCtx {
             batcher.read_into(pawn + cs2dumper::client::C_BaseEntity::m_iHealth, &mut health);
             batcher.read_into(controller + cs2dumper::client::C_BaseEntity::m_iTeamNum, &mut team);
             batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_pClippingWeapon, &mut clipping_weapon);
-            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_bIsScoped, &mut is_scoped);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawn::m_bIsScoped, &mut is_scoped);
         }
     
         let team = TeamID::from_i32(team);
@@ -144,41 +146,101 @@ impl DmaCtx {
         Ok(is_controller)
     }
 
-    // Todo: Optimize this function: find another way to do this
-    pub fn has_c4(&mut self, pawn: Address, entity_list: Address) -> anyhow::Result<bool> {
-        let mut has_c4 = false;
-        let wep_services = self.process.read_addr64(pawn + cs2dumper::client::C_BasePlayerPawn::m_pWeaponServices)?;
-        let wep_count: i32  = self.process.read(wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons)?;
-        let wep_base = self.process.read_addr64(wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons + 0x8)?;
+    pub fn get_c4_holder(&mut self, pawns: Vec<Address>, entity_list: Address, csdata: &CsData) -> Option<Address> {
 
-        for wep_idx in 0..wep_count {
-            let handle: i32 = self.process.read(wep_base + wep_idx * 0x4)?;
-            if handle == -1 {
-                continue;
-            }
-
-            let list_entry = self.process.read_addr64(entity_list + 0x8 * ((handle & 0x7FFF) >> 9) + 16)?;
-            if let Some(wep_ptr) = {
-                if list_entry.is_null() || !list_entry.is_valid() {
-                    None
-                } else {
-                    let ptr = self.process.read_addr64(list_entry + 120 * (handle & 0x1FF))?;
-                    Some(ptr)
-                }
-            } {
-                let wep_data = self.process.read_addr64(wep_ptr + cs2dumper::client::C_BaseEntity::m_nSubclassID + 0x8)?;
-                let id: i32 = self.process.read(wep_data + cs2dumper::client::CCSWeaponBaseVData::m_WeaponType)?;
-
-                if id == 7 {
-                    has_c4 = true;
-                    break;
-                }
-            }
+        if csdata.bomb_dropped || csdata.bomb_planted {
+            return None;
         }
 
-        Ok(has_c4)
-    }
+        // (pawn, wep_services, wep_count, wep_base)
+        let mut data_vec: Vec<(Address, u64, i32, u64)> = pawns
+            .into_iter()
+            .map(|pawn| (pawn, 0u64, 0i32, 0u64))
+            .collect();
 
+        // Get wep_services
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(pawn, wep_services, _, _)| {
+            batcher.read_into(*pawn + cs2dumper::client::C_BasePlayerPawn::m_pWeaponServices, wep_services);
+        });
+        drop(batcher);
+
+        // Get wep_count and wep_base
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, wep_services, wep_count, wep_base)| {
+            batcher.read_into((*wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons as u64).into(), wep_count);
+            batcher.read_into((*wep_services + cs2dumper::client::CPlayer_WeaponServices::m_hMyWeapons as u64 + 0x8).into() , wep_base);
+        });
+        drop(batcher);
+
+        // Rebuild data vec
+        // Vec<(pawn, wep_base, Vec<(buff, buff2)>)>
+        let mut data_vec: Vec<(Address, u64, Vec<(u64, i32)>)> = data_vec
+            .into_iter()
+            .map(|(pawn, _, wep_count, wep_base)| {
+                let weps = (0..wep_count).into_iter().map(|idx| (0u64, idx)).collect();
+                (pawn, wep_base, weps)
+            })
+            .collect();
+
+        // Get handle
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, wep_base, wep_data_vec)| {
+            wep_data_vec.iter_mut().for_each(|(_, idx)| {
+                let b: Address = (*wep_base).into();
+                batcher.read_into(b + * idx * 0x4, idx);
+            });
+        });
+        drop(batcher);
+
+        // Get list entry
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, _, wep_data_vec)| {
+            wep_data_vec.iter_mut().for_each(|(list_entry, handle)| {
+                batcher.read_into(entity_list + 0x8 * ((*handle & 0x7FFF) >> 9) + 16, list_entry);
+            });
+        });
+        drop(batcher);
+
+        // Get wep ptr
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, _, wep_data_vec)| {
+            wep_data_vec.iter_mut().for_each(|(list_entry, handle)| {
+                let le: Address = (*list_entry).into();
+                batcher.read_into(le + 120 * (*handle & 0x1FF), list_entry);
+            });
+        });
+        drop(batcher);
+
+        // Get wep data
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, _, wep_data_vec)| {
+            wep_data_vec.iter_mut().for_each(|(wep_ptr, _)| {
+                let b: Address = (*wep_ptr).into();
+                batcher.read_into(b + cs2dumper::client::C_BaseEntity::m_nSubclassID + 0x8, wep_ptr);
+            });
+        });
+        drop(batcher);
+
+        // Get wep id
+        let mut batcher = self.process.batcher();
+        data_vec.iter_mut().for_each(|(_, _, wep_data_vec)| {
+            wep_data_vec.iter_mut().for_each(|(wep_data, id)| {
+                let b: Address = (*wep_data).into();
+                batcher.read_into(b + cs2dumper::client::CCSWeaponBaseVData::m_WeaponType, id);
+            });
+        });
+        drop(batcher);
+
+        let holder = data_vec.into_iter().find(|(_, _, wep_data_vec)| {
+            wep_data_vec.iter().find(|(_, id)| { *id == 7 }).is_some()
+        });
+
+        match holder {
+            Some((addr, _, _)) => Some(addr),
+            None => None,
+        }
+    }
 }
 
 

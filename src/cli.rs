@@ -40,10 +40,16 @@ fn version() -> String {
     let commit_date = option_env!("VERGEN_GIT_COMMIT_DATE").unwrap_or("unknown");
     let avail_cons = {
         let inventory = Inventory::scan();
-        inventory.available_connectors().join(", ")
+        let mut avail = inventory.available_connectors();
+        avail.push("native".into());
+        avail.join(", ")
     };
 
-    format!(" {pkg_ver} (rev {git_hash})\nCommit Date: {commit_date}\nAvailable Connectors: {avail_cons}")
+    format!(
+        "{pkg_ver} (rev {git_hash})\n\
+        Commit Date: {commit_date}\n\
+        Available Connectors: {avail_cons}\n"
+    )
 }
 
 fn port_in_range(s: &str) -> Result<u16, String> {

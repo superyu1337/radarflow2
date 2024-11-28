@@ -1,8 +1,8 @@
 use std::{thread, time::{Duration, Instant}};
 
-use memflow::{os::Process, types::Address, mem::MemoryView};
+use memflow::{mem::MemoryView, os::Process, types::Address};
 
-use crate::{enums::{TeamID, PlayerType}, comms::{EntityData, PlayerData, RadarData, ArcRwlockRadarData, BombData}};
+use crate::{enums::PlayerType, comms::{EntityData, PlayerData, RadarData, ArcRwlockRadarData, BombData}};
 
 use self::{context::DmaCtx, threaddata::CsData};
 
@@ -19,6 +19,8 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
     // For read timing
     let mut last_bomb_dropped = false;
     let mut last_bomb_planted = false;
+    let mut last_freeze_period = false;
+    let mut last_round_start_count = 0u8;
     let mut last_tick_count = 0;
     let mut last_big_read = Instant::now();
 
@@ -50,8 +52,35 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             data.update_bomb(&mut ctx);
         }
 
-        if !data.bomb_dropped && last_bomb_dropped && !data.bomb_planted {
+        if data.bomb_dropped != last_bomb_dropped || data.bomb_planted != last_bomb_planted {
+            log::debug!("Bomb holder recheck due to bomb status");
             data.recheck_bomb_holder = true;
+        }
+
+        if last_freeze_period != data.freeze_period {
+            log::debug!("Bomb holder recheck due to freeze time");
+            data.recheck_bomb_holder = true;
+        }
+
+        if last_round_start_count != data.round_start_count {
+            log::debug!("Bomb holder recheck due to round start");
+            data.recheck_bomb_holder = true;
+        }
+
+        last_freeze_period = data.freeze_period;
+        last_round_start_count = data.round_start_count;
+
+        if data.recheck_bomb_holder {
+            let mut pawns: Vec<Address> = data.players
+                .clone()
+                .into_iter()
+                .map(|(_, pawn)| pawn)
+                .collect();
+
+            pawns.push(data.local_pawn.into());
+        
+            data.bomb_holder = ctx.get_c4_holder(pawns, data.entity_list.into(), &data);
+            data.recheck_bomb_holder = false;
         }
 
         let bomb_defuse_timeleft: f32 = {
@@ -123,23 +152,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
             ).unwrap();
 
             if local_data.health > 0 {
-                let has_bomb = {
-                    if data.bomb_planted || data.bomb_dropped {
-                        false
-                    } else if data.recheck_bomb_holder {
-                        if local_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
-                            let is_holder = ctx.has_c4(
-                                data.local_pawn.into(), data.entity_list.into()
-                            ).unwrap_or(false);
-
-                            if is_holder {
-                                data.bomb_holder = data.local.into();
-                                data.recheck_bomb_holder = false;
-                            }
-
-                            is_holder
-                        } else { false }
-                    } else { Address::from(data.local) == data.bomb_holder }
+                let has_bomb = match data.bomb_holder {
+                    Some(bh) => data.local_pawn == bh.to_umem(),
+                    None => false,
                 };
 
                 entity_data.push(
@@ -164,21 +179,9 @@ pub async fn run(radar_data: ArcRwlockRadarData, connector: Connector, pcileech_
                     continue;
                 }
 
-                let has_bomb = {
-                    if data.bomb_planted {
-                        false
-                    } else if data.recheck_bomb_holder {
-                        if player_data.team == Some(TeamID::T) && !data.bomb_dropped && !data.bomb_planted {
-                            let is_holder = ctx.has_c4(*pawn, data.entity_list.into()).unwrap_or(false);
-
-                            if is_holder {
-                                data.bomb_holder = *controller;
-                                data.recheck_bomb_holder = false;
-                            }
-
-                            is_holder
-                        } else { false }
-                    } else { *controller == data.bomb_holder }
+                let has_bomb = match data.bomb_holder {
+                    Some(bh) => *pawn == bh,
+                    None => false,
                 };
 
                 let player_type = {
