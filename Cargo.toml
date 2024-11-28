@@ -1,6 +1,6 @@
 [package]
 name = "radarflow"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Janek S <development@superyu.xyz"]
 edition = "2021"
 
@@ -8,39 +8,39 @@ edition = "2021"
 
 [dependencies]
 # memory
-memflow = "0.2.1"
+memflow = "0.2.3"
 memflow-native = { git = "https://github.com/memflow/memflow-native" }
 dataview = "1.0.1"
 
 # logging
-log = "0.4.21"
-simple_logger = "4.3.3"
+log = "0.4.22"
+simple_logger = "5.0.0"
 
 # error handling
-anyhow = "1.0.81"
+anyhow = "1.0.93"
 
 # derive stuff
 enum-primitive-derive = "0.3.0"
-num-traits = "0.2.18"
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.115"
-clap = { version = "4.5.4", features = ["derive", "string"] }
+num-traits = "0.2.19"
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+clap = { version = "4.5.21", features = ["derive", "string"] }
 
 # tokio
 tokio = { version = "1.37.0", features = ["full"] }
 
 # networking
-axum = { version = "0.7.5", features = ["ws"] }
-tower-http = { version = "0.5.2", features = ["fs"] }
-tower = "0.4.13"
-local-ip-address = "0.6.1"
+axum = { version = "0.7.9", features = ["ws"] }
+tower-http = { version = "0.6.2", features = ["fs"] }
+tower = "0.5.1"
+local-ip-address = "0.6.3"
 
 # other
-itertools = "0.12.1"
+itertools = "0.13.0"
 
 
 [build-dependencies]
-reqwest = { version = "0.12.2", features = ["blocking"] }
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.115"
-vergen = { version = "8.3.1", features = ["build", "cargo", "git", "gitcl", "rustc", "si"] }
+reqwest = { version = "0.12.9", features = ["blocking"] }
+serde = { version = "1.0.215", features = ["derive"] }
+serde_json = "1.0.133"
+vergen-gitcl = { version = "1.0.0", features = ["build", "cargo", "rustc",] }

@@ -45,7 +45,11 @@ fn version() -> String {
         avail.join(", ")
     };
 
-    format!(" {pkg_ver} (rev {git_hash})\nCommit Date: {commit_date}\nAvailable Connectors: {avail_cons}")
+    format!(
+        "{pkg_ver} (rev {git_hash})\n\
+        Commit Date: {commit_date}\n\
+        Available Connectors: {avail_cons}\n"
+    )
 }
 
 fn port_in_range(s: &str) -> Result<u16, String> {

@@ -21,7 +21,7 @@ pub struct CsData {
     // Common
     pub local: u64,
     pub local_pawn: u64,
-    pub is_dead: bool,
+    // pub is_dead: bool,   // TODO: Why is this here?
     pub tick_count: i32,
     pub freeze_period: bool,
     pub round_start_count: u8,
@@ -178,7 +178,7 @@ impl CsData {
             let round_start_count_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_nRoundStartCount as u64).into();
 
             // Game Entity System
-            let highest_index_addr = (self.game_ent_sys + cs2dumper::offsets::client_dll::dwGameEntitySystem_getHighestEntityIndex as u64).into();
+            let highest_index_addr = (self.game_ent_sys + cs2dumper::offsets::client_dll::dwGameEntitySystem_highestEntityIndex as u64).into();
 
             let mut batcher = ctx.process.batcher();
             batcher.read_into(
@@ -237,7 +237,7 @@ impl CsData {
         }
 
 
-        let map_string = ctx.process.read_char_string_n(map_ptr.into(), 32).unwrap_or(String::from("<empty>"));
+        let map_string = ctx.process.read_utf8_lossy(map_ptr.into(), 32).unwrap_or(String::from("<empty>"));
 
         self.map = map_string;
         self.bomb_dropped = bomb_dropped != 0;
