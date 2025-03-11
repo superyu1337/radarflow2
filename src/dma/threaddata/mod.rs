@@ -169,7 +169,7 @@ impl CsData {
         {
             // Globals
             let tick_count_addr = (self.globals + 0x40).into();
-            let map_addr = (self.globals + 0x1B8).into();
+            let map_addr = (self.globals + 384).into();
 
             // Gamerules
             let bomb_dropped_addr = (self.gamerules + cs2dumper::client::C_CSGameRules::m_bBombDropped as u64).into();
