@@ -97,7 +97,7 @@ impl DmaCtx {
         let mut team = 0i32;
         let mut clipping_weapon = 0u64;
         let mut is_scoped = 0u8;
-        let mut crosshair_id = 0u8;
+        let mut crosshair_id = 0i32;
 
         {
             let mut batcher = MemoryViewBatcher::new(&mut self.process);
@@ -170,7 +170,7 @@ impl DmaCtx {
             health,
             has_awp,
             is_scoped: is_scoped != 0,
-            crosshair_id: 0
+            crosshair_id: -1
         })
     }
 
@@ -296,5 +296,5 @@ pub struct BatchedPlayerData {
     pub health: u32,
     pub has_awp: bool,
     pub is_scoped: bool,
-    pub crosshair_id: u8,
+    pub crosshair_id: i32,
 }
