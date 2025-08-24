@@ -101,10 +101,10 @@ impl DmaCtx {
         {
             let mut batcher = MemoryViewBatcher::new(&mut self.process);
             batcher.read_into(pawn + cs2dumper::client::C_BasePlayerPawn::m_vOldOrigin, &mut pos);
-            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_angEyeAngles + 4, &mut yaw);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawn::m_angEyeAngles + 4, &mut yaw);
             batcher.read_into(pawn + cs2dumper::client::C_BaseEntity::m_iHealth, &mut health);
             batcher.read_into(controller + cs2dumper::client::C_BaseEntity::m_iTeamNum, &mut team);
-            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawnBase::m_pClippingWeapon, &mut clipping_weapon);
+            batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawn::m_pClippingWeapon, &mut clipping_weapon);
             batcher.read_into(pawn + cs2dumper::client::C_CSPlayerPawn::m_bIsScoped, &mut is_scoped);
         }
     
