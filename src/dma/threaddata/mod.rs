@@ -219,10 +219,8 @@ impl CsData {
                     if self.bomb_defuse_stamp.is_none() {
                         self.bomb_defuse_stamp = Some(Instant::now())
                     }
-                } else {
-                    if self.bomb_defuse_stamp.is_some() {
-                        self.bomb_defuse_stamp = None;
-                    }
+                } else if self.bomb_defuse_stamp.is_some() {
+                    self.bomb_defuse_stamp = None;
                 }
 
             } else {
