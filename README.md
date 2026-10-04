@@ -1,3 +1,14 @@
+# ⛔️ DEPRECATED
+
+> **Warning**  
+> **This repository has been officially deprecated and is no longer actively maintained.** No further updates, bug fixes, or security patches will be released.
+
+### Will you ever make a new version?
+> Perhaps. I mostly run linux these days, so if I ever make a v3, it will:
+> 1. Be on [codeberg](https://codeberg.org/) instead of GitHub
+> 2. Support both Windows and Linux targets.
+> 3. Have a proper UI.
+
 # radarflow2
 A Web radar for CS2 using [memflow](https://github.com/memflow/memflow)
 
